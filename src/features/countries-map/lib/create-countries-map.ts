@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import type { FeatureLike } from 'ol/Feature';
+import Feature, { type FeatureLike } from 'ol/Feature';
 import GeoJSON from 'ol/format/GeoJSON';
 import VectorLayer from 'ol/layer/Vector';
 import TileLayer from 'ol/layer/Tile';
@@ -20,10 +20,15 @@ type CreateCountriesMapParams = {
 };
 
 type CountriesMapContext = {
+  abortCountryLoad: () => void;
   map: Map;
   countrySource: VectorSource<CountryFeature>;
   findCountryAtPixel: (pixel: Pixel) => CountryFeature | null;
 };
+
+function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
+  return feature instanceof Feature;
+}
 
 export function createCountriesMap({
   target,
@@ -31,25 +36,64 @@ export function createCountriesMap({
   selectedFeatureRef,
   styles,
 }: CreateCountriesMapParams): CountriesMapContext {
+  const countryFormat = new GeoJSON<CountryFeature>({
+    dataProjection: 'EPSG:4326',
+    featureProjection: 'EPSG:3857',
+  });
+  let countryLoadController: AbortController | null = null;
+
   const countrySource = new VectorSource<CountryFeature>({
-    url: mapConfig.countriesGeoJsonUrl,
-    format: new GeoJSON({
-      dataProjection: 'EPSG:4326',
-      featureProjection: 'EPSG:3857',
-    }),
+    loader: (extent, resolution, projection, success, failure) => {
+      countryLoadController?.abort();
+      countryLoadController = new AbortController();
+
+      fetch(mapConfig.countriesGeoJsonUrl, {
+        signal: countryLoadController.signal,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            failure?.();
+            return null;
+          }
+
+          return response.json();
+        })
+        .then((geoJson) => {
+          if (!geoJson) {
+            return;
+          }
+
+          const features = countryFormat.readFeatures(geoJson, {
+            extent,
+            featureProjection: projection,
+          });
+
+          countrySource.addFeatures(features);
+          success?.(features);
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+          }
+
+          failure?.();
+        });
+    },
   });
 
   const countryLayer = new VectorLayer({
     source: countrySource,
     declutter: false,
     style: (feature: FeatureLike) => {
-      const countryFeature = feature as CountryFeature;
+      if (!isCountryFeature(feature)) {
+        return styles.invisible;
+      }
 
-      if (countryFeature === selectedFeatureRef.current) {
+      if (feature === selectedFeatureRef.current) {
         return styles.selected;
       }
 
-      if (countryFeature === hoveredFeatureRef.current) {
+      if (feature === hoveredFeatureRef.current) {
         return styles.hover;
       }
 
@@ -78,10 +122,13 @@ export function createCountriesMap({
   });
 
   return {
+    abortCountryLoad: () => {
+      countryLoadController?.abort();
+    },
     map,
     countrySource,
     findCountryAtPixel: (pixel: Pixel) =>
-      map.forEachFeatureAtPixel(pixel, (feature) => feature as CountryFeature, {
+      map.forEachFeatureAtPixel(pixel, (feature) => (isCountryFeature(feature) ? feature : null), {
         layerFilter: (layer) => layer === countryLayer,
         hitTolerance: 2,
       }) || null,

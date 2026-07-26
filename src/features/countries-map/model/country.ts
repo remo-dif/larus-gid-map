@@ -5,7 +5,7 @@ export type CountryFeature = Feature<Geometry>;
 
 export type CountryInfo = {
   name: string;
-  iso2: string;
+  iso2: string | null;
 };
 
 function getStringProperty(feature: CountryFeature, key: string): string | undefined {
@@ -24,6 +24,6 @@ export function getCountryInfo(feature: CountryFeature | null): CountryInfo | nu
       getStringProperty(feature, 'ISO_A2') ||
       getStringProperty(feature, 'ISO_CODE') ||
       getStringProperty(feature, 'GID_0') ||
-      '--',
+      null,
   };
 }

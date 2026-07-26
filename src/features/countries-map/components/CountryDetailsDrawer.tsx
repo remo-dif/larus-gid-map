@@ -24,7 +24,7 @@ export function CountryDetailsDrawer({ country, open }: CountryDetailsDrawerProp
       <Box className="drawer-content">
         {country && (
           <Typography className="country-title" component="h1">
-            {country.name} | {country.iso2}
+            {country.iso2 === null ? country.name : `${country.name} | ${country.iso2}`}
           </Typography>
         )}
       </Box>

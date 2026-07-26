@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -11,14 +12,18 @@ type CountrySelectorPanelProps = {
   onCountryChange: (countryCode: string) => void;
 };
 
+function hasCountryCode(country: CountryInfo): country is CountryInfo & { iso2: string } {
+  return country.iso2 !== null;
+}
+
 export function CountrySelectorPanel({
   countries,
   selectedCountryCode,
   onCountryChange,
 }: CountrySelectorPanelProps) {
-  const handleCountryChange = (event: SelectChangeEvent) => {
+  const handleCountryChange = useCallback((event: SelectChangeEvent) => {
     onCountryChange(event.target.value);
-  };
+  }, [onCountryChange]);
 
   return (
     <Box className="country-selector-panel" component="section" aria-label="Selezione paese">
@@ -35,7 +40,7 @@ export function CountrySelectorPanel({
           <MenuItem value="">
             <em>Nessuna selezione</em>
           </MenuItem>
-          {countries.map((country) => (
+          {countries.filter(hasCountryCode).map((country) => (
             <MenuItem key={country.iso2} value={country.iso2}>
               {country.name} | {country.iso2}
             </MenuItem>
