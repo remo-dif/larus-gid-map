@@ -10,9 +10,13 @@ export type CountryInfo = {
 
 export type Level1Data = object;
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 function getStringProperty(feature: CountryFeature, key: string): string | undefined {
   const value = feature.get(key);
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
+  return isNonEmptyString(value) ? value : undefined;
 }
 
 export function getCountryInfo(feature: CountryFeature | null): CountryInfo | null {

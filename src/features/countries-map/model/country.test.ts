@@ -47,6 +47,21 @@ describe('getCountryInfo', () => {
     });
   });
 
+  it('ignores empty and whitespace-only string properties', () => {
+    const country = getCountryInfo(createCountryFeature({
+      NAME_1: '   ',
+      NAME_IT: '',
+      NAME_EN: 'Italy',
+      ISO_A2: ' ',
+      GID_0: 'ITA',
+    }));
+
+    expect(country).toEqual({
+      name: 'Italy',
+      iso2: 'ITA',
+    });
+  });
+
   it('returns null when no feature is provided', () => {
     expect(getCountryInfo(null)).toBeNull();
   });
