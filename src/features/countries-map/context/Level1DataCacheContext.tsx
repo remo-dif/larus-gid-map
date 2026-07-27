@@ -13,9 +13,9 @@ type Level1DataCacheProviderProps = {
 };
 
 export function Level1DataCacheProvider({ children }: Level1DataCacheProviderProps) {
-  const cacheRef = useRef<globalThis.Map<string, Level1Data>>(new globalThis.Map());
+  const cacheRef = useRef<Map<string, Level1Data>>(new Map());
   // Keep in-flight fetches shared so fast repeated selections do not hit the same file twice.
-  const pendingRequestsRef = useRef<globalThis.Map<string, Promise<Level1Data>>>(new globalThis.Map());
+  const pendingRequestsRef = useRef<Map<string, Promise<Level1Data>>>(new Map());
 
   const loadLevel1Data = useCallback(async (countryCode: string, signal?: AbortSignal) => {
     const cachedData = cacheRef.current.get(countryCode);

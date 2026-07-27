@@ -3,7 +3,7 @@ import Feature, { type FeatureLike } from 'ol/Feature';
 import GeoJSON from 'ol/format/GeoJSON';
 import VectorLayer from 'ol/layer/Vector';
 import TileLayer from 'ol/layer/Tile';
-import Map from 'ol/Map';
+import OlMap from 'ol/Map';
 import type { Pixel } from 'ol/pixel';
 import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
@@ -21,7 +21,7 @@ type CreateCountriesMapParams = {
 
 type CountriesMapContext = {
   abortCountryLoad: () => void;
-  map: Map;
+  map: OlMap;
   countrySource: VectorSource<CountryFeature>;
   regionSource: VectorSource<CountryFeature>;
   findCountryAtPixel: (pixel: Pixel) => CountryFeature | null;
@@ -126,7 +126,7 @@ export function createCountriesMap({
     },
   });
 
-  const map = new Map({
+  const map = new OlMap({
     target,
     layers: [
       new TileLayer({

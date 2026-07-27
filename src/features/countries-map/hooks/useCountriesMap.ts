@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Map from 'ol/Map';
+import OlMap from 'ol/Map';
 import { unByKey } from 'ol/Observable';
 import { useLevel1DataCache } from '../context/Level1DataCacheContext';
 import { createCountriesMap } from '../lib/create-countries-map';
@@ -32,8 +32,8 @@ function refreshFeature(feature: CountryFeature | null) {
 
 export function useCountriesMap(): UseCountriesMapResult {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<Map | null>(null);
-  const countryFeaturesByCodeRef = useRef<globalThis.Map<string, CountryFeature>>(new globalThis.Map());
+  const mapRef = useRef<OlMap | null>(null);
+  const countryFeaturesByCodeRef = useRef<Map<string, CountryFeature>>(new Map());
   const regionLoadControllerRef = useRef<AbortController | null>(null);
   const clearRegionFeaturesRef = useRef<(() => void) | null>(null);
   const setRegionFeaturesRef = useRef<((geoJson: Level1Data) => CountryFeature[]) | null>(null);
@@ -171,7 +171,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     setRegionFeaturesRef.current = setRegionFeatures;
 
     const syncCountryOptions = () => {
-      const featuresByCode = new globalThis.Map<string, CountryFeature>();
+      const featuresByCode = new Map<string, CountryFeature>();
       const nextCountries = countrySource
         .getFeatures()
         .reduce<CountryInfo[]>((countriesList, feature) => {
@@ -255,7 +255,7 @@ export function useCountriesMap(): UseCountriesMapResult {
       unByKey([pointerMoveKey, singleClickKey, featuresLoadEndKey, featuresLoadEndLoadingKey, featuresLoadErrorKey]);
       abortCountryLoad();
       regionLoadControllerRef.current?.abort();
-      countryFeaturesByCodeRef.current = new globalThis.Map();
+      countryFeaturesByCodeRef.current = new Map();
       clearRegionFeaturesRef.current = null;
       setRegionFeaturesRef.current = null;
       map.setTarget(undefined);
