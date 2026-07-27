@@ -52,7 +52,9 @@ function createMapHarness() {
     NAME_1: 'Abruzzo',
     GID_1: 'ITA.1_1',
   }, [11, 21, 12, 22]);
+  const animate = vi.fn();
   const fit = vi.fn();
+  const getZoom = vi.fn(() => 5);
   const clearRegionSource = vi.fn();
   const setRegionFeatures = vi.fn();
   const abortCountryLoad = vi.fn();
@@ -73,7 +75,7 @@ function createMapHarness() {
   const map = {
     getSize: vi.fn(() => [1200, 800]),
     getTargetElement: vi.fn(() => targetElement),
-    getView: vi.fn(() => ({ fit })),
+    getView: vi.fn(() => ({ animate, fit, getZoom })),
     on: vi.fn((eventName: string, handler: EventHandler) => {
       eventHandlers.set(eventName, handler);
       return { eventName, handler };
@@ -98,7 +100,9 @@ function createMapHarness() {
     eventHandlers,
     findCountryAtPixel,
     findRegionAtPixel,
+    animate,
     fit,
+    getZoom,
     chinaFragmentFeature,
     chinaMainFeature,
     franceFeature,
@@ -129,6 +133,8 @@ function HookProbe() {
       <button type="button" onClick={() => countriesMap.selectCountryByCode('')}>clear</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('XX')}>select missing</button>
       <button type="button" onClick={countriesMap.clearSelection}>close</button>
+      <button type="button" onClick={countriesMap.zoomIn}>zoom in</button>
+      <button type="button" onClick={countriesMap.zoomOut}>zoom out</button>
     </section>
   );
 }
@@ -172,6 +178,27 @@ describe('useCountriesMap', () => {
       duration: 850,
       padding: [72, 592, 72, 72],
       maxZoom: 7,
+    });
+  });
+
+  it('zooms the map view in and out from controls', async () => {
+    const harness = createMapHarness();
+    vi.mocked(useLevel1DataCache).mockReturnValue({
+      loadLevel1Data: vi.fn(),
+    });
+
+    render(<HookProbe />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'zoom in' }));
+    await userEvent.click(screen.getByRole('button', { name: 'zoom out' }));
+
+    expect(harness.animate).toHaveBeenNthCalledWith(1, {
+      duration: 850,
+      zoom: 6,
+    });
+    expect(harness.animate).toHaveBeenNthCalledWith(2, {
+      duration: 850,
+      zoom: 4,
     });
   });
 

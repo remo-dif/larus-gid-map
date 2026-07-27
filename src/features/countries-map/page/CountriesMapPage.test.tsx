@@ -24,6 +24,8 @@ function renderCountriesMapPage(overrides: Partial<ReturnType<typeof useCountrie
     selectCountryByCode: vi.fn(),
     selectedCountry: null,
     selectedCountryCode: '',
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
   };
 
   mockedUseCountriesMap.mockReturnValue({
@@ -81,5 +83,18 @@ describe('CountriesMapPage', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Italia | IT' }));
 
     expect(selectCountryByCode).toHaveBeenCalledWith('IT');
+  });
+
+  it('calls map zoom callbacks from the overlay controls', async () => {
+    const zoomIn = vi.fn();
+    const zoomOut = vi.fn();
+
+    renderCountriesMapPage({ zoomIn, zoomOut });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Aumenta zoom' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Diminuisci zoom' }));
+
+    expect(zoomIn).toHaveBeenCalledTimes(1);
+    expect(zoomOut).toHaveBeenCalledTimes(1);
   });
 });

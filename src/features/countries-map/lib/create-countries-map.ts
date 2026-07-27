@@ -142,8 +142,8 @@ export function createCountriesMap({
     view: new View({
       center: mapConfig.defaultCenter,
       zoom: mapConfig.defaultZoom,
-      minZoom: 2,
-      maxZoom: 18,
+      minZoom: mapConfig.minZoom,
+      maxZoom: mapConfig.maxZoom,
     }),
   });
 

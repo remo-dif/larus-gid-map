@@ -21,6 +21,8 @@ type UseCountriesMapResult = {
   selectCountryByCode: (countryCode: string) => void;
   selectedCountry: CountryInfo | null;
   selectedCountryCode: string;
+  zoomIn: () => void;
+  zoomOut: () => void;
 };
 
 type ViewPadding = [number, number, number, number];
@@ -33,6 +35,10 @@ function refreshFeature(feature: CountryFeature | null) {
 
 function refreshFeatures(features: CountryFeature[]) {
   features.forEach(refreshFeature);
+}
+
+function clampZoom(zoom: number) {
+  return Math.min(mapConfig.maxZoom, Math.max(mapConfig.minZoom, zoom));
 }
 
 export function useCountriesMap(): UseCountriesMapResult {
@@ -55,6 +61,21 @@ export function useCountriesMap(): UseCountriesMapResult {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { loadLevel1Data } = useLevel1DataCache();
   const styles = useMemo(() => createCountryStyles(), []);
+
+  const zoomBy = useCallback((step: number) => {
+    const view = mapRef.current?.getView();
+    if (!view) {
+      return;
+    }
+
+    view.animate({
+      duration: mapConfig.animationDuration,
+      zoom: clampZoom((view.getZoom() ?? mapConfig.defaultZoom) + step),
+    });
+  }, []);
+
+  const zoomIn = useCallback(() => zoomBy(1), [zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(-1), [zoomBy]);
 
   const clearSelection = useCallback(() => {
     const currentSelected = selectedFeaturesRef.current;
@@ -297,5 +318,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     selectCountryByCode,
     selectedCountry,
     selectedCountryCode,
+    zoomIn,
+    zoomOut,
   };
 }
