@@ -17,12 +17,15 @@ export function CountriesMapPage() {
     isLoadingCountries,
     loadError,
     mapElementRef,
+    regions,
     selectionError,
     setLoadError,
     setSelectionError,
     selectCountryByCode,
+    selectRegionByCode,
     selectedCountry,
     selectedCountryCode,
+    selectedRegionCode,
     zoomIn,
     zoomOut,
   } = useCountriesMap();
@@ -63,8 +66,11 @@ export function CountriesMapPage() {
       )}
       <CountrySelectorPanel
         countries={countries}
+        regions={regions}
         selectedCountryCode={selectedCountryCode}
+        selectedRegionCode={selectedRegionCode}
         onCountryChange={selectCountryByCode}
+        onRegionChange={selectRegionByCode}
       />
       <Box className="map-zoom-controls" aria-label="Controlli zoom">
         <IconButton aria-label="Aumenta zoom" onClick={zoomIn} size="small">

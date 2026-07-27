@@ -56,7 +56,7 @@ function createMapHarness() {
   const fit = vi.fn();
   const getZoom = vi.fn(() => 5);
   const clearRegionSource = vi.fn();
-  const setRegionFeatures = vi.fn();
+  const setRegionFeatures = vi.fn(() => [regionFeature as never]);
   const abortCountryLoad = vi.fn();
   const setTarget = vi.fn();
   const findCountryAtPixel = vi.fn();
@@ -122,7 +122,9 @@ function HookProbe() {
     <section>
       <div ref={countriesMap.mapElementRef} data-testid="map" />
       <div data-testid="countries">{countriesMap.countries.map((country) => country.iso2).join(',')}</div>
+      <div data-testid="regions">{countriesMap.regions.map((region) => region.code).join(',')}</div>
       <div data-testid="selected-code">{countriesMap.selectedCountryCode}</div>
+      <div data-testid="selected-region-code">{countriesMap.selectedRegionCode}</div>
       <div data-testid="selected-name">{countriesMap.selectedCountry?.name || ''}</div>
       <div data-testid="drawer-open">{String(countriesMap.drawerOpen)}</div>
       <div data-testid="selection-error">{countriesMap.selectionError || ''}</div>
@@ -132,6 +134,7 @@ function HookProbe() {
       <button type="button" onClick={() => countriesMap.selectCountryByCode('CN')}>select CN</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('')}>clear</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('XX')}>select missing</button>
+      <button type="button" onClick={() => countriesMap.selectRegionByCode('ITA.1_1')}>select region</button>
       <button type="button" onClick={countriesMap.clearSelection}>close</button>
       <button type="button" onClick={countriesMap.zoomIn}>zoom in</button>
       <button type="button" onClick={countriesMap.zoomOut}>zoom out</button>
@@ -215,9 +218,20 @@ describe('useCountriesMap', () => {
     await waitFor(() => expect(loadLevel1Data).toHaveBeenCalledWith('IT', expect.any(AbortSignal)));
     expect(harness.clearRegionSource).toHaveBeenCalled();
     expect(harness.setRegionFeatures).toHaveBeenCalledWith(level1Data);
+    await waitFor(() => expect(screen.getByTestId('regions')).toHaveTextContent('ITA.1_1'));
     expect(screen.getByTestId('selected-code')).toHaveTextContent('IT');
     expect(screen.getByTestId('selected-name')).toHaveTextContent('Italia');
     expect(screen.getByTestId('drawer-open')).toHaveTextContent('true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'select region' }));
+
+    expect(screen.getByTestId('selected-region-code')).toHaveTextContent('ITA.1_1');
+    expect(screen.getByTestId('selected-name')).toHaveTextContent('Abruzzo');
+    expect(harness.fit).toHaveBeenLastCalledWith([11, 21, 12, 22], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
+      maxZoom: 7,
+    });
   });
 
   it('reports missing countries selected from outside the map', async () => {

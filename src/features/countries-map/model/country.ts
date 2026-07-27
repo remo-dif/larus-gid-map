@@ -8,6 +8,11 @@ export type CountryInfo = {
   iso2: string | null;
 };
 
+export type RegionInfo = {
+  name: string;
+  code: string;
+};
+
 type GeoJsonPosition = number[];
 
 type GeoJsonGeometry =
@@ -52,5 +57,25 @@ export function getCountryInfo(feature: CountryFeature | null): CountryInfo | nu
       getStringProperty(feature, 'ISO_CODE') ||
       getStringProperty(feature, 'GID_0') ||
       null,
+  };
+}
+
+export function getRegionInfo(feature: CountryFeature | null): RegionInfo | null {
+  if (!feature) {
+    return null;
+  }
+
+  const code = getStringProperty(feature, 'GID_1');
+  if (!code) {
+    return null;
+  }
+
+  return {
+    name:
+      getStringProperty(feature, 'NAME_1') ||
+      getStringProperty(feature, 'NAME_IT') ||
+      getStringProperty(feature, 'NAME_EN') ||
+      'Regione',
+    code,
   };
 }

@@ -35,6 +35,10 @@ body {
   border: 1px solid rgba(60, 72, 82, 0.35);
 }
 
+.country-selector-panel .MuiAutocomplete-root + .MuiAutocomplete-root {
+  margin-top: 8px;
+}
+
 .map-zoom-controls {
   position: absolute;
   top: 12px;

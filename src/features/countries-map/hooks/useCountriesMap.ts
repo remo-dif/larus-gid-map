@@ -6,7 +6,14 @@ import { Level1DataFetchError, useLevel1DataCache } from '../context/Level1DataC
 import { createCountriesMap } from '../lib/create-countries-map';
 import { createCountryStyles } from '../lib/country-styles';
 import { mapConfig } from '../lib/map-config';
-import { getCountryInfo, type CountryFeature, type CountryInfo, type Level1Data } from '../model/country';
+import {
+  getCountryInfo,
+  getRegionInfo,
+  type CountryFeature,
+  type CountryInfo,
+  type Level1Data,
+  type RegionInfo,
+} from '../model/country';
 
 type UseCountriesMapResult = {
   clearSelection: () => void;
@@ -15,12 +22,15 @@ type UseCountriesMapResult = {
   isLoadingCountries: boolean;
   loadError: string | null;
   mapElementRef: React.RefObject<HTMLDivElement | null>;
+  regions: RegionInfo[];
   selectionError: string | null;
   setLoadError: React.Dispatch<React.SetStateAction<string | null>>;
   setSelectionError: React.Dispatch<React.SetStateAction<string | null>>;
   selectCountryByCode: (countryCode: string) => void;
+  selectRegionByCode: (regionCode: string) => void;
   selectedCountry: CountryInfo | null;
   selectedCountryCode: string;
+  selectedRegionCode: string;
   zoomIn: () => void;
   zoomOut: () => void;
 };
@@ -45,6 +55,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<OlMap | null>(null);
   const countryFeaturesByCodeRef = useRef<Map<string, CountryFeature[]>>(new Map());
+  const regionFeaturesByCodeRef = useRef<Map<string, CountryFeature>>(new Map());
   const regionLoadControllerRef = useRef<AbortController | null>(null);
   const clearRegionFeaturesRef = useRef<(() => void) | null>(null);
   const setRegionFeaturesRef = useRef<((geoJson: Level1Data) => CountryFeature[]) | null>(null);
@@ -53,11 +64,13 @@ export function useCountriesMap(): UseCountriesMapResult {
   const hoveredFeatureRef = useRef<CountryFeature | null>(null);
   const selectedFeaturesRef = useRef<CountryFeature[]>([]);
   const [countries, setCountries] = useState<CountryInfo[]>([]);
+  const [regions, setRegions] = useState<RegionInfo[]>([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState('');
+  const [selectedRegionCode, setSelectedRegionCode] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { loadLevel1Data } = useLevel1DataCache();
   const styles = useMemo(() => createCountryStyles(), []);
@@ -84,8 +97,11 @@ export function useCountriesMap(): UseCountriesMapResult {
     hoveredFeatureRef.current = null;
     regionLoadControllerRef.current?.abort();
     clearRegionFeaturesRef.current?.();
+    regionFeaturesByCodeRef.current = new Map();
+    setRegions([]);
     setSelectedCountry(null);
     setSelectedCountryCode('');
+    setSelectedRegionCode('');
     selectedCountryCodeRef.current = '';
     setDrawerOpen(false);
     refreshFeatures(currentSelected);
@@ -120,6 +136,29 @@ export function useCountriesMap(): UseCountriesMapResult {
     });
   }, []);
 
+  const syncRegionOptions = useCallback((features: CountryFeature[]) => {
+    const regionsByCode = new Map<string, RegionInfo>();
+    const featuresByCode = new Map<string, CountryFeature>();
+
+    features.forEach((feature) => {
+      const region = getRegionInfo(feature);
+      if (!region) {
+        return;
+      }
+
+      if (!regionsByCode.has(region.code)) {
+        regionsByCode.set(region.code, region);
+        featuresByCode.set(region.code, feature);
+      }
+    });
+
+    regionFeaturesByCodeRef.current = featuresByCode;
+    setRegions(
+      Array.from(regionsByCode.values())
+        .sort((regionA, regionB) => regionA.name.localeCompare(regionB.name, 'it')),
+    );
+  }, []);
+
   const mountLevel1Layer = useCallback(async (countryCode: string) => {
     try {
       // Only one country's regional layer should ever be loading for the current selection.
@@ -133,25 +172,29 @@ export function useCountriesMap(): UseCountriesMapResult {
         return;
       }
 
-      setRegionFeaturesRef.current?.(level1Data);
+      const regionFeatures = setRegionFeaturesRef.current?.(level1Data) || [];
+      syncRegionOptions(regionFeatures);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
 
       clearRegionFeaturesRef.current?.();
+      regionFeaturesByCodeRef.current = new Map();
+      setRegions([]);
       if (error instanceof Level1DataFetchError && error.status === 404) {
         return;
       }
 
       setSelectionError('Regioni non disponibili per il paese selezionato');
     }
-  }, [loadLevel1Data]);
+  }, [loadLevel1Data, syncRegionOptions]);
 
   const selectFeatures = useCallback((features: CountryFeature[]) => {
     const previousSelected = selectedFeaturesRef.current;
     selectedFeaturesRef.current = features;
     setSelectedCountry(getCountryInfo(features[0] || null));
+    setSelectedRegionCode(getRegionInfo(features[0] || null)?.code || '');
     setDrawerOpen(true);
     refreshFeatures(previousSelected);
     refreshFeatures(features);
@@ -166,6 +209,9 @@ export function useCountriesMap(): UseCountriesMapResult {
     }
 
     clearRegionFeaturesRef.current?.();
+    regionFeaturesByCodeRef.current = new Map();
+    setRegions([]);
+    setSelectedRegionCode('');
     setSelectedCountryCode(country.iso2);
     selectedCountryCodeRef.current = country.iso2;
     selectFeatures(features);
@@ -187,6 +233,29 @@ export function useCountriesMap(): UseCountriesMapResult {
       }
     },
     [clearSelection, selectCountry],
+  );
+
+  const selectRegionByCode = useCallback(
+    (regionCode: string) => {
+      if (!regionCode) {
+        setSelectedRegionCode('');
+        const selectedCountryFeatures = selectedCountryCodeRef.current
+          ? countryFeaturesByCodeRef.current.get(selectedCountryCodeRef.current)
+          : null;
+        if (selectedCountryFeatures) {
+          selectFeatures(selectedCountryFeatures);
+        }
+        return;
+      }
+
+      const feature = regionFeaturesByCodeRef.current.get(regionCode);
+      if (feature) {
+        selectFeatures([feature]);
+      } else {
+        setSelectionError('Regione non disponibile');
+      }
+    },
+    [selectFeatures],
   );
 
   useEffect(() => {
@@ -298,6 +367,7 @@ export function useCountriesMap(): UseCountriesMapResult {
       abortCountryLoad();
       regionLoadControllerRef.current?.abort();
       countryFeaturesByCodeRef.current = new Map();
+      regionFeaturesByCodeRef.current = new Map();
       clearRegionFeaturesRef.current = null;
       setRegionFeaturesRef.current = null;
       map.setTarget(undefined);
@@ -312,12 +382,15 @@ export function useCountriesMap(): UseCountriesMapResult {
     isLoadingCountries,
     loadError,
     mapElementRef,
+    regions,
     selectionError,
     setLoadError,
     setSelectionError,
     selectCountryByCode,
+    selectRegionByCode,
     selectedCountry,
     selectedCountryCode,
+    selectedRegionCode,
     zoomIn,
     zoomOut,
   };

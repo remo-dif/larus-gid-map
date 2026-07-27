@@ -1,6 +1,6 @@
 import Feature from 'ol/Feature';
 import { describe, expect, it } from 'vitest';
-import { getCountryInfo, type CountryFeature } from './country';
+import { getCountryInfo, getRegionInfo, type CountryFeature } from './country';
 
 function createCountryFeature(properties: Record<string, unknown>): CountryFeature {
   const feature = new Feature();
@@ -64,5 +64,23 @@ describe('getCountryInfo', () => {
 
   it('returns null when no feature is provided', () => {
     expect(getCountryInfo(null)).toBeNull();
+  });
+});
+
+describe('getRegionInfo', () => {
+  it('returns level1 region names and GID_1 codes', () => {
+    const region = getRegionInfo(createCountryFeature({
+      NAME_1: 'Abruzzo',
+      GID_1: 'ITA.1_1',
+    }));
+
+    expect(region).toEqual({
+      name: 'Abruzzo',
+      code: 'ITA.1_1',
+    });
+  });
+
+  it('returns null when the level1 code is missing', () => {
+    expect(getRegionInfo(createCountryFeature({ NAME_1: 'Senza codice' }))).toBeNull();
   });
 });

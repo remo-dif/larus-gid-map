@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CountriesMapPage } from './CountriesMapPage';
 import { useCountriesMap } from '../hooks/useCountriesMap';
-import type { CountryInfo } from '../model/country';
+import type { CountryInfo, RegionInfo } from '../model/country';
 
 vi.mock('../hooks/useCountriesMap');
 
@@ -18,12 +18,15 @@ function renderCountriesMapPage(overrides: Partial<ReturnType<typeof useCountrie
     isLoadingCountries: false,
     loadError: null,
     mapElementRef: createRef<HTMLDivElement>(),
+    regions: [],
     selectionError: null,
     setLoadError: vi.fn(),
     setSelectionError: vi.fn(),
     selectCountryByCode: vi.fn(),
+    selectRegionByCode: vi.fn(),
     selectedCountry: null,
     selectedCountryCode: '',
+    selectedRegionCode: '',
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
   };
@@ -72,17 +75,24 @@ describe('CountriesMapPage', () => {
 
   it('passes countries and selection callbacks into the selector panel', async () => {
     const countries: CountryInfo[] = [{ name: 'Italia', iso2: 'IT' }];
+    const regions: RegionInfo[] = [{ name: 'Abruzzo', code: 'ITA.1_1' }];
     const selectCountryByCode = vi.fn();
+    const selectRegionByCode = vi.fn();
 
     renderCountriesMapPage({
       countries,
+      regions,
       selectCountryByCode,
+      selectRegionByCode,
     });
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Paese' }));
     await userEvent.click(screen.getByRole('option', { name: 'Italia | IT' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Regione' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Abruzzo | ITA.1_1' }));
 
     expect(selectCountryByCode).toHaveBeenCalledWith('IT');
+    expect(selectRegionByCode).toHaveBeenCalledWith('ITA.1_1');
   });
 
   it('calls map zoom callbacks from the overlay controls', async () => {
