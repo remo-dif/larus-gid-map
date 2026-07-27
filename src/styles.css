@@ -29,6 +29,8 @@ body {
   left: 0;
   z-index: 1;
   width: min(360px, 100vw);
+  box-sizing: border-box;
+  padding: 8px;
   background: #fff;
   border: 1px solid rgba(60, 72, 82, 0.35);
 }
