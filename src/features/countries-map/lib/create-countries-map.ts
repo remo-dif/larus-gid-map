@@ -105,6 +105,7 @@ export function createCountriesMap({
   });
 
   const regionSource = new VectorSource<CountryFeature>();
+  // This layer is intentionally above world-raw so hover/click can target Level1 regions first.
   const regionLayer = new VectorLayer({
     source: regionSource,
     declutter: false,
@@ -164,6 +165,7 @@ export function createCountriesMap({
         hitTolerance: 2,
       }) || null,
     setRegionFeatures: (geoJson: object) => {
+      // Replacing the source clears the previous country's regions before mounting the new ones.
       regionSource.clear();
       const features = countryFormat.readFeatures(geoJson);
       regionSource.addFeatures(features);

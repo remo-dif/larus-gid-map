@@ -88,11 +88,13 @@ export function useCountriesMap(): UseCountriesMapResult {
 
   const mountLevel1Layer = useCallback(async (countryCode: string) => {
     try {
+      // Only one country's regional layer should ever be loading for the current selection.
       regionLoadControllerRef.current?.abort();
       const controller = new AbortController();
       regionLoadControllerRef.current = controller;
 
       const level1Data = await loadLevel1Data(countryCode, controller.signal);
+      // Ignore late responses from countries that were selected before the latest click.
       if (selectedCountryCodeRef.current !== countryCode) {
         return;
       }
@@ -189,6 +191,7 @@ export function useCountriesMap(): UseCountriesMapResult {
       countryFeaturesByCodeRef.current = featuresByCode;
       setCountries(nextCountries);
 
+      // Center on Italy once the world layer is available, without selecting it.
       if (!didFitInitialCountryRef.current) {
         const initialFeature = featuresByCode.get(mapConfig.initialCountryCode);
         if (initialFeature) {
@@ -212,11 +215,13 @@ export function useCountriesMap(): UseCountriesMapResult {
 
     const pointerMoveKey = map.on('pointermove', (event) => {
       if (!event.dragging) {
+        // When a country is open, regions take precedence over the underlying world feature.
         setHoveredFeature(findRegionAtPixel(event.pixel) || findCountryAtPixel(event.pixel));
       }
     });
 
     const singleClickKey = map.on('singleclick', (event) => {
+      // Region clicks update the details panel; country clicks replace the active region layer.
       const regionFeature = findRegionAtPixel(event.pixel);
       const feature = regionFeature || findCountryAtPixel(event.pixel);
 
