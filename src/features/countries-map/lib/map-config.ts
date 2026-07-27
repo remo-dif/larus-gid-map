@@ -3,6 +3,8 @@ import { fromLonLat } from 'ol/proj';
 export const mapConfig = {
   animationDuration: 850,
   countriesGeoJsonUrl: import.meta.env.VITE_COUNTRIES_GEOJSON_URL || '/countries/world_raw.geojson',
+  level1GeoJsonUrl: (countryCode: string) => `/${countryCode}/${countryCode}.geojson`,
+  initialCountryCode: 'IT',
   defaultCenter: fromLonLat([12.5, 42.5]),
   defaultZoom: 5,
   drawerWidth: 520,

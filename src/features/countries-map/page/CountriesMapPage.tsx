@@ -10,6 +10,7 @@ import { useCountriesMap } from '../hooks/useCountriesMap';
 export function CountriesMapPage() {
   const {
     countries,
+    clearSelection,
     drawerOpen,
     isLoadingCountries,
     loadError,
@@ -61,7 +62,7 @@ export function CountriesMapPage() {
         selectedCountryCode={selectedCountryCode}
         onCountryChange={selectCountryByCode}
       />
-      <CountryDetailsDrawer country={selectedCountry} open={drawerOpen} />
+      <CountryDetailsDrawer country={selectedCountry} onClose={clearSelection} open={drawerOpen} />
       <Snackbar
         open={selectionError !== null}
         autoHideDuration={3000}

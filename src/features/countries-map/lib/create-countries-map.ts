@@ -23,7 +23,10 @@ type CountriesMapContext = {
   abortCountryLoad: () => void;
   map: Map;
   countrySource: VectorSource<CountryFeature>;
+  regionSource: VectorSource<CountryFeature>;
   findCountryAtPixel: (pixel: Pixel) => CountryFeature | null;
+  findRegionAtPixel: (pixel: Pixel) => CountryFeature | null;
+  setRegionFeatures: (geoJson: object) => CountryFeature[];
 };
 
 function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
@@ -101,6 +104,27 @@ export function createCountriesMap({
     },
   });
 
+  const regionSource = new VectorSource<CountryFeature>();
+  const regionLayer = new VectorLayer({
+    source: regionSource,
+    declutter: false,
+    style: (feature: FeatureLike) => {
+      if (!isCountryFeature(feature)) {
+        return styles.invisible;
+      }
+
+      if (feature === selectedFeatureRef.current) {
+        return styles.selected;
+      }
+
+      if (feature === hoveredFeatureRef.current) {
+        return styles.hover;
+      }
+
+      return styles.region;
+    },
+  });
+
   const map = new Map({
     target,
     layers: [
@@ -112,6 +136,7 @@ export function createCountriesMap({
         }),
       }),
       countryLayer,
+      regionLayer,
     ],
     view: new View({
       center: mapConfig.defaultCenter,
@@ -127,10 +152,22 @@ export function createCountriesMap({
     },
     map,
     countrySource,
+    regionSource,
     findCountryAtPixel: (pixel: Pixel) =>
       map.forEachFeatureAtPixel(pixel, (feature) => (isCountryFeature(feature) ? feature : null), {
         layerFilter: (layer) => layer === countryLayer,
         hitTolerance: 2,
       }) || null,
+    findRegionAtPixel: (pixel: Pixel) =>
+      map.forEachFeatureAtPixel(pixel, (feature) => (isCountryFeature(feature) ? feature : null), {
+        layerFilter: (layer) => layer === regionLayer,
+        hitTolerance: 2,
+      }) || null,
+    setRegionFeatures: (geoJson: object) => {
+      regionSource.clear();
+      const features = countryFormat.readFeatures(geoJson);
+      regionSource.addFeatures(features);
+      return features;
+    },
   };
 }

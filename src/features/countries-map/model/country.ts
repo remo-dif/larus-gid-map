@@ -8,6 +8,8 @@ export type CountryInfo = {
   iso2: string | null;
 };
 
+export type Level1Data = object;
+
 function getStringProperty(feature: CountryFeature, key: string): string | undefined {
   const value = feature.get(key);
   return typeof value === 'string' && value.length > 0 ? value : undefined;
@@ -19,7 +21,11 @@ export function getCountryInfo(feature: CountryFeature | null): CountryInfo | nu
   }
 
   return {
-    name: getStringProperty(feature, 'NAME_IT') || getStringProperty(feature, 'NAME_EN') || 'Paese',
+    name:
+      getStringProperty(feature, 'NAME_1') ||
+      getStringProperty(feature, 'NAME_IT') ||
+      getStringProperty(feature, 'NAME_EN') ||
+      'Paese',
     iso2:
       getStringProperty(feature, 'ISO_A2') ||
       getStringProperty(feature, 'ISO_CODE') ||

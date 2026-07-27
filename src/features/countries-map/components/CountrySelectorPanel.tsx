@@ -1,9 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, type SyntheticEvent } from 'react';
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
 import type { CountryInfo } from '../model/country';
 
 type CountrySelectorPanelProps = {
@@ -21,32 +19,29 @@ export function CountrySelectorPanel({
   selectedCountryCode,
   onCountryChange,
 }: CountrySelectorPanelProps) {
-  const handleCountryChange = useCallback((event: SelectChangeEvent) => {
-    onCountryChange(event.target.value);
-  }, [onCountryChange]);
+  const selectableCountries = countries.filter(hasCountryCode);
+  const selectedCountry =
+    selectableCountries.find((country) => country.iso2 === selectedCountryCode) || null;
+
+  const handleCountryChange = useCallback(
+    (_event: SyntheticEvent, country: (CountryInfo & { iso2: string }) | null) => {
+      onCountryChange(country?.iso2 || '');
+    },
+    [onCountryChange],
+  );
 
   return (
     <Box className="country-selector-panel" component="section" aria-label="Selezione paese">
-      <FormControl fullWidth size="small">
-        <InputLabel id="country-selector-label">Paese</InputLabel>
-        <Select
-          labelId="country-selector-label"
-          id="country-selector"
-          label="Paese"
-          value={selectedCountryCode}
-          onChange={handleCountryChange}
-          displayEmpty={false}
-        >
-          <MenuItem value="">
-            <em>Nessuna selezione</em>
-          </MenuItem>
-          {countries.filter(hasCountryCode).map((country) => (
-            <MenuItem key={country.iso2} value={country.iso2}>
-              {country.name} | {country.iso2}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Autocomplete
+        id="country-selector"
+        size="small"
+        options={selectableCountries}
+        value={selectedCountry}
+        onChange={handleCountryChange}
+        getOptionKey={(country) => country.iso2}
+        getOptionLabel={(country) => `${country.name} | ${country.iso2}`}
+        renderInput={(params) => <TextField {...params} label="Paese" />}
+      />
     </Box>
   );
 }
