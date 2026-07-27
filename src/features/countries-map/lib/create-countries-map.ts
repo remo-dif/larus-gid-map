@@ -10,12 +10,12 @@ import OSM from 'ol/source/OSM';
 import View from 'ol/View';
 import { mapConfig } from './map-config';
 import type { CountryStyles } from './country-styles';
-import type { CountryFeature } from '../model/country';
+import type { CountryFeature, Level1Data } from '../model/country';
 
 type CreateCountriesMapParams = {
   target: HTMLDivElement;
   hoveredFeatureRef: MutableRefObject<CountryFeature | null>;
-  selectedFeatureRef: MutableRefObject<CountryFeature | null>;
+  selectedFeaturesRef: MutableRefObject<CountryFeature[]>;
   styles: CountryStyles;
 };
 
@@ -26,7 +26,7 @@ type CountriesMapContext = {
   regionSource: VectorSource<CountryFeature>;
   findCountryAtPixel: (pixel: Pixel) => CountryFeature | null;
   findRegionAtPixel: (pixel: Pixel) => CountryFeature | null;
-  setRegionFeatures: (geoJson: object) => CountryFeature[];
+  setRegionFeatures: (geoJson: Level1Data) => CountryFeature[];
 };
 
 function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
@@ -36,7 +36,7 @@ function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
 export function createCountriesMap({
   target,
   hoveredFeatureRef,
-  selectedFeatureRef,
+  selectedFeaturesRef,
   styles,
 }: CreateCountriesMapParams): CountriesMapContext {
   const countryFormat = new GeoJSON<CountryFeature>({
@@ -92,7 +92,7 @@ export function createCountriesMap({
         return styles.invisible;
       }
 
-      if (feature === selectedFeatureRef.current) {
+      if (selectedFeaturesRef.current.includes(feature)) {
         return styles.selected;
       }
 
@@ -114,7 +114,7 @@ export function createCountriesMap({
         return styles.invisible;
       }
 
-      if (feature === selectedFeatureRef.current) {
+      if (selectedFeaturesRef.current.includes(feature)) {
         return styles.selected;
       }
 
@@ -164,7 +164,7 @@ export function createCountriesMap({
         layerFilter: (layer) => layer === regionLayer,
         hitTolerance: 2,
       }) || null,
-    setRegionFeatures: (geoJson: object) => {
+    setRegionFeatures: (geoJson: Level1Data) => {
       // Replacing the source clears the previous country's regions before mounting the new ones.
       regionSource.clear();
       const features = countryFormat.readFeatures(geoJson);

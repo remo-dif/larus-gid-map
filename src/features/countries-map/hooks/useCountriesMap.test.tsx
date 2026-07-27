@@ -3,9 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCountriesMap } from './useCountriesMap';
 import { createCountriesMap } from '../lib/create-countries-map';
-import { useLevel1DataCache } from '../context/Level1DataCacheContext';
+import { Level1DataFetchError, useLevel1DataCache } from '../context/Level1DataCacheContext';
 
-vi.mock('../context/Level1DataCacheContext');
+vi.mock('../context/Level1DataCacheContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../context/Level1DataCacheContext')>();
+
+  return {
+    ...actual,
+    useLevel1DataCache: vi.fn(),
+  };
+});
 vi.mock('../lib/create-countries-map');
 
 type EventHandler = (event?: any) => void;
@@ -29,6 +36,14 @@ function createMapHarness() {
     NAME_EN: 'Italy',
     ISO_A2: 'IT',
   }, [10, 20, 30, 40]);
+  const chinaMainFeature = createMockFeature({
+    NAME_IT: 'Cina',
+    ISO_A2: 'CN',
+  }, [100, 100, 150, 150]);
+  const chinaFragmentFeature = createMockFeature({
+    NAME_IT: 'Cina',
+    ISO_A2: 'CN',
+  }, [200, 220, 250, 260]);
   const franceFeature = createMockFeature({
     NAME_IT: 'Francia',
     ISO_A2: 'FR',
@@ -46,7 +61,7 @@ function createMapHarness() {
   const findRegionAtPixel = vi.fn();
 
   const countrySource = {
-    getFeatures: vi.fn(() => [franceFeature, italyFeature]),
+    getFeatures: vi.fn(() => [franceFeature, chinaMainFeature, chinaFragmentFeature, italyFeature]),
     on: vi.fn((eventName: string, handler: EventHandler) => {
       sourceHandlers.set(eventName, [...(sourceHandlers.get(eventName) || []), handler]);
       return { eventName, handler };
@@ -84,6 +99,8 @@ function createMapHarness() {
     findCountryAtPixel,
     findRegionAtPixel,
     fit,
+    chinaFragmentFeature,
+    chinaMainFeature,
     franceFeature,
     italyFeature,
     regionFeature,
@@ -108,6 +125,7 @@ function HookProbe() {
       <div data-testid="load-error">{countriesMap.loadError || ''}</div>
       <div data-testid="loading">{String(countriesMap.isLoadingCountries)}</div>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('IT')}>select IT</button>
+      <button type="button" onClick={() => countriesMap.selectCountryByCode('CN')}>select CN</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('')}>clear</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('XX')}>select missing</button>
       <button type="button" onClick={countriesMap.clearSelection}>close</button>
@@ -128,10 +146,31 @@ describe('useCountriesMap', () => {
 
     render(<HookProbe />);
 
-    await waitFor(() => expect(screen.getByTestId('countries')).toHaveTextContent('FR,IT'));
+    await waitFor(() => expect(screen.getByTestId('countries')).toHaveTextContent('CN,FR,IT'));
     expect(harness.fit).toHaveBeenCalledWith([10, 20, 30, 40], {
       duration: 850,
       padding: [72, 72, 72, 72],
+      maxZoom: 7,
+    });
+  });
+
+  it('deduplicates multi-fragment countries and fits the full selected extent', async () => {
+    const harness = createMapHarness();
+    vi.mocked(useLevel1DataCache).mockReturnValue({
+      loadLevel1Data: vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] }),
+    });
+
+    render(<HookProbe />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'select CN' }));
+
+    await waitFor(() => expect(screen.getByTestId('selected-code')).toHaveTextContent('CN'));
+    expect(screen.getByTestId('countries')).toHaveTextContent('CN,FR,IT');
+    expect(harness.chinaMainFeature.changed).toHaveBeenCalled();
+    expect(harness.chinaFragmentFeature.changed).toHaveBeenCalled();
+    expect(harness.fit).toHaveBeenLastCalledWith([100, 100, 250, 260], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
       maxZoom: 7,
     });
   });
@@ -191,6 +230,19 @@ describe('useCountriesMap', () => {
     expect(screen.getByTestId('selected-name')).toHaveTextContent('Abruzzo');
 
     harness.findRegionAtPixel.mockReturnValue(null);
+    harness.findCountryAtPixel.mockReturnValueOnce(harness.chinaFragmentFeature);
+    act(() => {
+      harness.eventHandlers.get('singleclick')?.({ pixel: [3, 4] });
+    });
+
+    expect(screen.getByTestId('selected-code')).toHaveTextContent('CN');
+    expect(harness.fit).toHaveBeenLastCalledWith([100, 100, 250, 260], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
+      maxZoom: 7,
+    });
+
+    harness.findRegionAtPixel.mockReturnValue(null);
     harness.findCountryAtPixel.mockReturnValue(null);
     act(() => {
       harness.eventHandlers.get('singleclick')?.({ pixel: [5, 6] });
@@ -224,5 +276,19 @@ describe('useCountriesMap', () => {
         'Regioni non disponibili per il paese selezionato',
       );
     });
+  });
+
+  it('silently clears regions when level1 data is missing with 404', async () => {
+    const harness = createMapHarness();
+    const loadLevel1Data = vi.fn().mockRejectedValue(new Level1DataFetchError('IT', 404));
+    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data });
+
+    render(<HookProbe />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'select IT' }));
+
+    await waitFor(() => expect(loadLevel1Data).toHaveBeenCalledWith('IT', expect.any(AbortSignal)));
+    expect(harness.clearRegionSource).toHaveBeenCalled();
+    expect(screen.getByTestId('selection-error')).toBeEmptyDOMElement();
   });
 });

@@ -125,7 +125,7 @@ describe('createCountriesMap', () => {
     };
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ type: 'FeatureCollection' }),
+      json: vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] }),
     });
     vi.stubGlobal('fetch', fetchMock);
     olState.readFeatures.mockReturnValueOnce([countryFeature]);
@@ -133,7 +133,7 @@ describe('createCountriesMap', () => {
     const context = createCountriesMap({
       target,
       hoveredFeatureRef: { current: hoveredFeature },
-      selectedFeatureRef: { current: selectedFeature },
+      selectedFeaturesRef: { current: [selectedFeature] },
       styles: styles as never,
     });
 
@@ -175,7 +175,7 @@ describe('createCountriesMap', () => {
     const context = createCountriesMap({
       target: document.createElement('div'),
       hoveredFeatureRef: { current: null },
-      selectedFeatureRef: { current: null },
+      selectedFeaturesRef: { current: [] },
       styles: {
         invisible: {},
         region: {},
@@ -184,7 +184,7 @@ describe('createCountriesMap', () => {
       } as never,
     });
 
-    const mountedFeatures = context.setRegionFeatures({ type: 'FeatureCollection' });
+    const mountedFeatures = context.setRegionFeatures({ type: 'FeatureCollection', features: [] });
     const regionSource = olState.sources[1];
 
     expect(regionSource.clear).toHaveBeenCalled();
@@ -197,7 +197,7 @@ describe('createCountriesMap', () => {
     const context = createCountriesMap({
       target: document.createElement('div'),
       hoveredFeatureRef: { current: null },
-      selectedFeatureRef: { current: null },
+      selectedFeaturesRef: { current: [] },
       styles: {
         invisible: {},
         region: {},
@@ -219,5 +219,32 @@ describe('createCountriesMap', () => {
 
     expect(failure).toHaveBeenCalledTimes(1);
     context.abortCountryLoad();
+  });
+
+  it('styles every selected country fragment in a multi-feature country', async () => {
+    const { default: Feature } = await import('ol/Feature');
+    const { createCountriesMap } = await import('./create-countries-map');
+    const chinaMainFeature = new Feature({ ISO_A2: 'CN' });
+    const chinaFragmentFeature = new Feature({ ISO_A2: 'CN' });
+    const otherFeature = new Feature({ ISO_A2: 'FR' });
+    const styles = {
+      invisible: { name: 'invisible' },
+      region: { name: 'region' },
+      hover: { name: 'hover' },
+      selected: { name: 'selected' },
+    };
+
+    createCountriesMap({
+      target: document.createElement('div'),
+      hoveredFeatureRef: { current: null },
+      selectedFeaturesRef: { current: [chinaMainFeature, chinaFragmentFeature] },
+      styles: styles as never,
+    });
+
+    const countryLayer = olState.layers[0];
+
+    expect(countryLayer.options.style(chinaMainFeature)).toBe(styles.selected);
+    expect(countryLayer.options.style(chinaFragmentFeature)).toBe(styles.selected);
+    expect(countryLayer.options.style(otherFeature)).toBe(styles.invisible);
   });
 });

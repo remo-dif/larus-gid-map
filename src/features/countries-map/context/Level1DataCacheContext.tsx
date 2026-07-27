@@ -8,6 +8,16 @@ type Level1DataCacheContextValue = {
 
 const Level1DataCacheContext = createContext<Level1DataCacheContextValue | null>(null);
 
+export class Level1DataFetchError extends Error {
+  constructor(
+    public readonly countryCode: string,
+    public readonly status: number,
+  ) {
+    super(`Level1 data request failed for ${countryCode} with status ${status}`);
+    this.name = 'Level1DataFetchError';
+  }
+}
+
 type Level1DataCacheProviderProps = {
   children: ReactNode;
 };
@@ -31,7 +41,7 @@ export function Level1DataCacheProvider({ children }: Level1DataCacheProviderPro
     const request = fetch(mapConfig.level1GeoJsonUrl(countryCode), { signal })
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Level1 data not found for ${countryCode}`);
+          throw new Level1DataFetchError(countryCode, response.status);
         }
 
         return response.json() as Promise<Level1Data>;

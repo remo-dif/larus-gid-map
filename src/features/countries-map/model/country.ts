@@ -8,7 +8,24 @@ export type CountryInfo = {
   iso2: string | null;
 };
 
-export type Level1Data = object;
+type GeoJsonPosition = number[];
+
+type GeoJsonGeometry =
+  | { type: 'Point'; coordinates: GeoJsonPosition }
+  | { type: 'MultiPoint' | 'LineString'; coordinates: GeoJsonPosition[] }
+  | { type: 'MultiLineString' | 'Polygon'; coordinates: GeoJsonPosition[][] }
+  | { type: 'MultiPolygon'; coordinates: GeoJsonPosition[][][] }
+  | { type: 'GeometryCollection'; geometries: GeoJsonGeometry[] }
+  | null;
+
+export type Level1Data = {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: GeoJsonGeometry;
+    properties?: Record<string, unknown> | null;
+  }>;
+};
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

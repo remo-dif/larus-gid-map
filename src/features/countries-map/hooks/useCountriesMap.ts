@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import OlMap from 'ol/Map';
 import { unByKey } from 'ol/Observable';
-import { useLevel1DataCache } from '../context/Level1DataCacheContext';
+import { createEmpty, extend } from 'ol/extent';
+import { Level1DataFetchError, useLevel1DataCache } from '../context/Level1DataCacheContext';
 import { createCountriesMap } from '../lib/create-countries-map';
 import { createCountryStyles } from '../lib/country-styles';
 import { mapConfig } from '../lib/map-config';
@@ -30,17 +31,21 @@ function refreshFeature(feature: CountryFeature | null) {
   }
 }
 
+function refreshFeatures(features: CountryFeature[]) {
+  features.forEach(refreshFeature);
+}
+
 export function useCountriesMap(): UseCountriesMapResult {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<OlMap | null>(null);
-  const countryFeaturesByCodeRef = useRef<Map<string, CountryFeature>>(new Map());
+  const countryFeaturesByCodeRef = useRef<Map<string, CountryFeature[]>>(new Map());
   const regionLoadControllerRef = useRef<AbortController | null>(null);
   const clearRegionFeaturesRef = useRef<(() => void) | null>(null);
   const setRegionFeaturesRef = useRef<((geoJson: Level1Data) => CountryFeature[]) | null>(null);
   const didFitInitialCountryRef = useRef(false);
   const selectedCountryCodeRef = useRef('');
   const hoveredFeatureRef = useRef<CountryFeature | null>(null);
-  const selectedFeatureRef = useRef<CountryFeature | null>(null);
+  const selectedFeaturesRef = useRef<CountryFeature[]>([]);
   const [countries, setCountries] = useState<CountryInfo[]>([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,9 +57,9 @@ export function useCountriesMap(): UseCountriesMapResult {
   const styles = useMemo(() => createCountryStyles(), []);
 
   const clearSelection = useCallback(() => {
-    const currentSelected = selectedFeatureRef.current;
+    const currentSelected = selectedFeaturesRef.current;
     const currentHovered = hoveredFeatureRef.current;
-    selectedFeatureRef.current = null;
+    selectedFeaturesRef.current = [];
     hoveredFeatureRef.current = null;
     regionLoadControllerRef.current?.abort();
     clearRegionFeaturesRef.current?.();
@@ -62,15 +67,23 @@ export function useCountriesMap(): UseCountriesMapResult {
     setSelectedCountryCode('');
     selectedCountryCodeRef.current = '';
     setDrawerOpen(false);
-    refreshFeature(currentSelected);
+    refreshFeatures(currentSelected);
     refreshFeature(currentHovered);
     mapRef.current?.getTargetElement().style.removeProperty('cursor');
   }, []);
 
-  const fitFeature = useCallback((feature: CountryFeature, padding?: ViewPadding) => {
+  const fitFeatures = useCallback((features: CountryFeature[], padding?: ViewPadding) => {
     const map = mapRef.current;
-    const geometry = feature.getGeometry();
-    if (!map || !geometry) {
+    if (!map || features.length === 0) {
+      return;
+    }
+
+    const extent = features.reduce((combinedExtent, feature) => {
+      const geometry = feature.getGeometry();
+      return geometry ? extend(combinedExtent, geometry.getExtent()) : combinedExtent;
+    }, createEmpty());
+
+    if (extent.some((value) => !Number.isFinite(value))) {
       return;
     }
 
@@ -79,7 +92,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     const rightPadding = isCompactViewport ? 72 : mapConfig.drawerWidth + 72;
     const viewPadding = padding || [72, rightPadding, 72, 72];
 
-    map.getView().fit(geometry.getExtent(), {
+    map.getView().fit(extent, {
       duration: mapConfig.animationDuration,
       padding: viewPadding,
       maxZoom: mapConfig.maxCountryZoom,
@@ -106,22 +119,26 @@ export function useCountriesMap(): UseCountriesMapResult {
       }
 
       clearRegionFeaturesRef.current?.();
+      if (error instanceof Level1DataFetchError && error.status === 404) {
+        return;
+      }
+
       setSelectionError('Regioni non disponibili per il paese selezionato');
     }
   }, [loadLevel1Data]);
 
-  const selectFeature = useCallback((feature: CountryFeature) => {
-    const previousSelected = selectedFeatureRef.current;
-    selectedFeatureRef.current = feature;
-    setSelectedCountry(getCountryInfo(feature));
+  const selectFeatures = useCallback((features: CountryFeature[]) => {
+    const previousSelected = selectedFeaturesRef.current;
+    selectedFeaturesRef.current = features;
+    setSelectedCountry(getCountryInfo(features[0] || null));
     setDrawerOpen(true);
-    refreshFeature(previousSelected);
-    refreshFeature(feature);
-    fitFeature(feature);
-  }, [fitFeature]);
+    refreshFeatures(previousSelected);
+    refreshFeatures(features);
+    fitFeatures(features);
+  }, [fitFeatures]);
 
-  const selectCountry = useCallback((feature: CountryFeature) => {
-    const country = getCountryInfo(feature);
+  const selectCountry = useCallback((features: CountryFeature[]) => {
+    const country = getCountryInfo(features[0] || null);
     if (!country?.iso2) {
       setSelectionError('Paese non disponibile');
       return;
@@ -130,9 +147,9 @@ export function useCountriesMap(): UseCountriesMapResult {
     clearRegionFeaturesRef.current?.();
     setSelectedCountryCode(country.iso2);
     selectedCountryCodeRef.current = country.iso2;
-    selectFeature(feature);
+    selectFeatures(features);
     void mountLevel1Layer(country.iso2);
-  }, [mountLevel1Layer, selectFeature]);
+  }, [mountLevel1Layer, selectFeatures]);
 
   const selectCountryByCode = useCallback(
     (countryCode: string) => {
@@ -141,9 +158,9 @@ export function useCountriesMap(): UseCountriesMapResult {
         return;
       }
 
-      const feature = countryFeaturesByCodeRef.current.get(countryCode);
-      if (feature) {
-        selectCountry(feature);
+      const features = countryFeaturesByCodeRef.current.get(countryCode);
+      if (features) {
+        selectCountry(features);
       } else {
         setSelectionError('Paese non disponibile');
       }
@@ -162,7 +179,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     const { abortCountryLoad, map, countrySource, regionSource, findCountryAtPixel, findRegionAtPixel, setRegionFeatures } = createCountriesMap({
       target: mapElementRef.current,
       hoveredFeatureRef,
-      selectedFeatureRef,
+      selectedFeaturesRef,
       styles,
     });
 
@@ -171,21 +188,23 @@ export function useCountriesMap(): UseCountriesMapResult {
     setRegionFeaturesRef.current = setRegionFeatures;
 
     const syncCountryOptions = () => {
-      const featuresByCode = new Map<string, CountryFeature>();
-      const nextCountries = countrySource
-        .getFeatures()
-        .reduce<CountryInfo[]>((countriesList, feature) => {
-          const country = getCountryInfo(feature);
-          if (country) {
-            countriesList.push(country);
-          }
+      const countriesByCode = new Map<string, CountryInfo>();
+      const featuresByCode = new Map<string, CountryFeature[]>();
 
-          if (country && country.iso2 !== null) {
-            featuresByCode.set(country.iso2, feature);
-          }
+      countrySource.getFeatures().forEach((feature) => {
+        const country = getCountryInfo(feature);
+        if (!country?.iso2) {
+          return;
+        }
 
-          return countriesList;
-        }, [])
+        if (!countriesByCode.has(country.iso2)) {
+          countriesByCode.set(country.iso2, country);
+        }
+
+        featuresByCode.set(country.iso2, [...(featuresByCode.get(country.iso2) || []), feature]);
+      });
+
+      const nextCountries = Array.from(countriesByCode.values())
         .sort((countryA, countryB) => countryA.name.localeCompare(countryB.name, 'it'));
 
       countryFeaturesByCodeRef.current = featuresByCode;
@@ -196,7 +215,7 @@ export function useCountriesMap(): UseCountriesMapResult {
         const initialFeature = featuresByCode.get(mapConfig.initialCountryCode);
         if (initialFeature) {
           didFitInitialCountryRef.current = true;
-          fitFeature(initialFeature, [72, 72, 72, 72]);
+          fitFeatures(initialFeature, [72, 72, 72, 72]);
         }
       }
     };
@@ -226,9 +245,11 @@ export function useCountriesMap(): UseCountriesMapResult {
       const feature = regionFeature || findCountryAtPixel(event.pixel);
 
       if (regionFeature) {
-        selectFeature(regionFeature);
+        selectFeatures([regionFeature]);
       } else if (feature) {
-        selectCountry(feature);
+        const country = getCountryInfo(feature);
+        const countryFeatures = country?.iso2 ? countryFeaturesByCodeRef.current.get(country.iso2) : null;
+        selectCountry(countryFeatures || [feature]);
       } else {
         clearSelection();
       }
@@ -261,7 +282,7 @@ export function useCountriesMap(): UseCountriesMapResult {
       map.setTarget(undefined);
       mapRef.current = null;
     };
-  }, [clearSelection, fitFeature, selectCountry, selectFeature, styles]);
+  }, [clearSelection, fitFeatures, selectCountry, selectFeatures, styles]);
 
   return {
     clearSelection,
