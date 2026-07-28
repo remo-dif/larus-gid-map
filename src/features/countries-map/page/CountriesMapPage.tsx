@@ -25,7 +25,7 @@ export function CountriesMapPage() {
     selectCountryByCode,
     selectRegionByCode,
     selectSublevel2ByCode,
-    selectedCountry,
+    selectedFeature,
     selectedCountryCode,
     selectedRegionCode,
     selectedSublevel2Code,
@@ -90,7 +90,7 @@ export function CountriesMapPage() {
           </SvgIcon>
         </IconButton>
       </Box>
-      <CountryDetailsDrawer country={selectedCountry} onClose={clearSelection} open={drawerOpen} />
+      <CountryDetailsDrawer feature={selectedFeature} onClose={clearSelection} open={drawerOpen} />
       <Snackbar
         open={selectionError !== null}
         autoHideDuration={3000}

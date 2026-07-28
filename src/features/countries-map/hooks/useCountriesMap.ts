@@ -11,13 +11,16 @@ import { createCountriesMap } from '../lib/create-countries-map';
 import { createCountryStyles } from '../lib/country-styles';
 import { mapConfig } from '../lib/map-config';
 import {
+  getFeatureDisplayInfo,
   getCountryInfo,
   getRegionInfo,
   getSublevel2Info,
   type CountryFeature,
   type CountryInfo,
+  type FeatureDisplayInfo,
   type Level1Data,
   type RegionInfo,
+  type Sublevel2Data,
   type Sublevel2Info,
 } from '../model/country';
 
@@ -36,7 +39,7 @@ type UseCountriesMapResult = {
   selectCountryByCode: (countryCode: string) => void;
   selectRegionByCode: (regionCode: string) => void;
   selectSublevel2ByCode: (sublevel2Code: string) => void;
-  selectedCountry: CountryInfo | null;
+  selectedFeature: FeatureDisplayInfo | null;
   selectedCountryCode: string;
   selectedRegionCode: string;
   selectedSublevel2Code: string;
@@ -71,7 +74,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const clearRegionFeaturesRef = useRef<(() => void) | null>(null);
   const clearSublevel2FeaturesRef = useRef<(() => void) | null>(null);
   const setRegionFeaturesRef = useRef<((geoJson: Level1Data) => CountryFeature[]) | null>(null);
-  const setSublevel2FeaturesRef = useRef<((geoJson: Level1Data) => CountryFeature[]) | null>(null);
+  const setSublevel2FeaturesRef = useRef<((geoJson: Sublevel2Data) => CountryFeature[]) | null>(null);
   const didFitInitialCountryRef = useRef(false);
   const selectedCountryCodeRef = useRef('');
   const selectedRegionCodeRef = useRef('');
@@ -83,7 +86,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
+  const [selectedFeature, setSelectedFeature] = useState<FeatureDisplayInfo | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState('');
   const [selectedRegionCode, setSelectedRegionCode] = useState('');
   const [selectedSublevel2Code, setSelectedSublevel2Code] = useState('');
@@ -119,7 +122,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     sublevel2FeaturesByCodeRef.current = new Map();
     setRegions([]);
     setSublevel2Items([]);
-    setSelectedCountry(null);
+    setSelectedFeature(null);
     setSelectedCountryCode('');
     setSelectedRegionCode('');
     setSelectedSublevel2Code('');
@@ -275,7 +278,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const selectFeatures = useCallback((features: CountryFeature[]) => {
     const previousSelected = selectedFeaturesRef.current;
     selectedFeaturesRef.current = features;
-    setSelectedCountry(getCountryInfo(features[0] || null));
+    setSelectedFeature(getFeatureDisplayInfo(features[0] || null));
     setSelectedRegionCode(getRegionInfo(features[0] || null)?.code || '');
     setSelectedSublevel2Code(getSublevel2Info(features[0] || null)?.code || '');
     setDrawerOpen(true);
@@ -545,7 +548,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     selectCountryByCode,
     selectRegionByCode,
     selectSublevel2ByCode,
-    selectedCountry,
+    selectedFeature,
     selectedCountryCode,
     selectedRegionCode,
     selectedSublevel2Code,

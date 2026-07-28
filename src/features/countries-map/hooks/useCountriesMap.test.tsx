@@ -146,7 +146,7 @@ function HookProbe() {
       <div data-testid="selected-code">{countriesMap.selectedCountryCode}</div>
       <div data-testid="selected-region-code">{countriesMap.selectedRegionCode}</div>
       <div data-testid="selected-sublevel2-code">{countriesMap.selectedSublevel2Code}</div>
-      <div data-testid="selected-name">{countriesMap.selectedCountry?.name || ''}</div>
+      <div data-testid="selected-name">{countriesMap.selectedFeature?.name || ''}</div>
       <div data-testid="drawer-open">{String(countriesMap.drawerOpen)}</div>
       <div data-testid="selection-error">{countriesMap.selectionError || ''}</div>
       <div data-testid="load-error">{countriesMap.loadError || ''}</div>

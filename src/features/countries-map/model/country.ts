@@ -3,10 +3,12 @@ import type Geometry from 'ol/geom/Geometry';
 
 export type CountryFeature = Feature<Geometry>;
 
-export type CountryInfo = {
+export type FeatureDisplayInfo = {
   name: string;
   iso2: string | null;
 };
+
+export type CountryInfo = FeatureDisplayInfo;
 
 export type RegionInfo = {
   name: string;
@@ -37,6 +39,8 @@ export type Level1Data = {
   }>;
 };
 
+export type Sublevel2Data = Level1Data;
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -46,7 +50,7 @@ function getStringProperty(feature: CountryFeature, key: string): string | undef
   return isNonEmptyString(value) ? value : undefined;
 }
 
-export function getCountryInfo(feature: CountryFeature | null): CountryInfo | null {
+export function getFeatureDisplayInfo(feature: CountryFeature | null): FeatureDisplayInfo | null {
   if (!feature) {
     return null;
   }
@@ -64,6 +68,10 @@ export function getCountryInfo(feature: CountryFeature | null): CountryInfo | nu
       getStringProperty(feature, 'GID_0') ||
       null,
   };
+}
+
+export function getCountryInfo(feature: CountryFeature | null): CountryInfo | null {
+  return getFeatureDisplayInfo(feature);
 }
 
 export function getRegionInfo(feature: CountryFeature | null): RegionInfo | null {

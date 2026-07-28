@@ -9,7 +9,7 @@ describe('CountryDetailsDrawer', () => {
 
     render(
       <CountryDetailsDrawer
-        country={{ name: 'Italia', iso2: 'IT' }}
+        feature={{ name: 'Italia', iso2: 'IT' }}
         onClose={onClose}
         open
       />,
@@ -25,7 +25,7 @@ describe('CountryDetailsDrawer', () => {
   it('renders a country without ISO code', () => {
     render(
       <CountryDetailsDrawer
-        country={{ name: 'Abruzzo', iso2: null }}
+        feature={{ name: 'Abruzzo', iso2: null }}
         onClose={vi.fn()}
         open
       />,

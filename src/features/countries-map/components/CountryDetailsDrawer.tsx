@@ -4,15 +4,15 @@ import IconButton from '@mui/material/IconButton';
 import SvgIcon from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import { mapConfig } from '../lib/map-config';
-import type { CountryInfo } from '../model/country';
+import type { FeatureDisplayInfo } from '../model/country';
 
 type CountryDetailsDrawerProps = {
-  country: CountryInfo | null;
+  feature: FeatureDisplayInfo | null;
   onClose: () => void;
   open: boolean;
 };
 
-export function CountryDetailsDrawer({ country, onClose, open }: CountryDetailsDrawerProps) {
+export function CountryDetailsDrawer({ feature, onClose, open }: CountryDetailsDrawerProps) {
   return (
     <Drawer
       anchor="right"
@@ -35,9 +35,9 @@ export function CountryDetailsDrawer({ country, onClose, open }: CountryDetailsD
             <path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z" />
           </SvgIcon>
         </IconButton>
-        {country && (
+        {feature && (
           <Typography className="country-title" component="h1">
-            {country.iso2 === null ? country.name : `${country.name} | ${country.iso2}`}
+            {feature.iso2 === null ? feature.name : `${feature.name} | ${feature.iso2}`}
           </Typography>
         )}
       </Box>

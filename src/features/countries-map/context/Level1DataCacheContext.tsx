@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from 'react';
 import { mapConfig } from '../lib/map-config';
-import type { Level1Data } from '../model/country';
+import type { Level1Data, Sublevel2Data } from '../model/country';
 
 type Level1DataCacheContextValue = {
   loadLevel1Data: (countryCode: string, signal?: AbortSignal) => Promise<Level1Data>;
-  loadLevel2Data: (level1Code: string, signal?: AbortSignal) => Promise<Level1Data>;
+  loadLevel2Data: (level1Code: string, signal?: AbortSignal) => Promise<Sublevel2Data>;
 };
 
 const Level1DataCacheContext = createContext<Level1DataCacheContextValue | null>(null);
@@ -35,11 +35,14 @@ type Level1DataCacheProviderProps = {
 
 export function Level1DataCacheProvider({ children }: Level1DataCacheProviderProps) {
   const cacheRef = useRef<Map<string, Level1Data>>(new Map());
-  const level2CacheRef = useRef<Map<string, Level1Data>>(new Map());
+  const level2CacheRef = useRef<Map<string, Sublevel2Data>>(new Map());
   // Keep in-flight fetches shared so fast repeated selections do not hit the same file twice.
   const pendingRequestsRef = useRef<Map<string, Promise<Level1Data>>>(new Map());
-  const pendingLevel2RequestsRef = useRef<Map<string, Promise<Level1Data>>>(new Map());
+  const pendingLevel2RequestsRef = useRef<Map<string, Promise<Sublevel2Data>>>(new Map());
 
+  // In-flight requests are shared by code. The AbortSignal belongs to the first caller,
+  // so aborting it cancels the shared fetch for every waiter; later callers reuse the
+  // same promise and cannot attach a separate signal until the request settles.
   const loadLevel1Data = useCallback(async (countryCode: string, signal?: AbortSignal) => {
     const cachedData = cacheRef.current.get(countryCode);
     if (cachedData) {
@@ -57,7 +60,7 @@ export function Level1DataCacheProvider({ children }: Level1DataCacheProviderPro
           throw new Level1DataFetchError(countryCode, response.status);
         }
 
-        return response.json() as Promise<Level1Data>;
+        return response.json() as Promise<Sublevel2Data>;
       })
       .then((data) => {
         cacheRef.current.set(countryCode, data);
@@ -71,6 +74,9 @@ export function Level1DataCacheProvider({ children }: Level1DataCacheProviderPro
     return request;
   }, []);
 
+  // In-flight requests are shared by code. The AbortSignal belongs to the first caller,
+  // so aborting it cancels the shared fetch for every waiter; later callers reuse the
+  // same promise and cannot attach a separate signal until the request settles.
   const loadLevel2Data = useCallback(async (level1Code: string, signal?: AbortSignal) => {
     const cachedData = level2CacheRef.current.get(level1Code);
     if (cachedData) {

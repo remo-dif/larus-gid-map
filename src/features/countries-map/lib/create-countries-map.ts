@@ -10,7 +10,7 @@ import OSM from 'ol/source/OSM';
 import View from 'ol/View';
 import { mapConfig } from './map-config';
 import type { CountryStyles } from './country-styles';
-import type { CountryFeature, Level1Data } from '../model/country';
+import type { CountryFeature, Level1Data, Sublevel2Data } from '../model/country';
 
 type CreateCountriesMapParams = {
   target: HTMLDivElement;
@@ -29,7 +29,7 @@ type CountriesMapContext = {
   findRegionAtPixel: (pixel: Pixel) => CountryFeature | null;
   findSublevel2AtPixel: (pixel: Pixel) => CountryFeature | null;
   setRegionFeatures: (geoJson: Level1Data) => CountryFeature[];
-  setSublevel2Features: (geoJson: Level1Data) => CountryFeature[];
+  setSublevel2Features: (geoJson: Sublevel2Data) => CountryFeature[];
 };
 
 function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
@@ -202,7 +202,7 @@ export function createCountriesMap({
       regionSource.addFeatures(features);
       return features;
     },
-    setSublevel2Features: (geoJson: Level1Data) => {
+    setSublevel2Features: (geoJson: Sublevel2Data) => {
       sublevel2Source.clear();
       const features = countryFormat.readFeatures(geoJson);
       sublevel2Source.addFeatures(features);

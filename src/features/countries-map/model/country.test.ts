@@ -1,6 +1,11 @@
 import Feature from 'ol/Feature';
 import { describe, expect, it } from 'vitest';
-import { getCountryInfo, getRegionInfo, type CountryFeature } from './country';
+import {
+  getCountryInfo,
+  getFeatureDisplayInfo,
+  getRegionInfo,
+  type CountryFeature,
+} from './country';
 
 function createCountryFeature(properties: Record<string, unknown>): CountryFeature {
   const feature = new Feature();
@@ -9,46 +14,48 @@ function createCountryFeature(properties: Record<string, unknown>): CountryFeatu
   return feature;
 }
 
-describe('getCountryInfo', () => {
-  it('prefers Italian country names and ISO_A2 codes', () => {
-    const country = getCountryInfo(createCountryFeature({
+describe('getFeatureDisplayInfo', () => {
+  it('prefers level2, level1, Italian country names and ISO_A2 codes', () => {
+    const feature = getFeatureDisplayInfo(createCountryFeature({
+      NAME_2: 'Pescara',
+      NAME_1: 'Abruzzo',
       NAME_IT: 'Italia',
       NAME_EN: 'Italy',
       ISO_A2: 'IT',
       GID_0: 'ITA',
     }));
 
-    expect(country).toEqual({
-      name: 'Italia',
+    expect(feature).toEqual({
+      name: 'Pescara',
       iso2: 'IT',
     });
   });
 
   it('falls back to English names and alternate country code properties', () => {
-    const country = getCountryInfo(createCountryFeature({
+    const feature = getFeatureDisplayInfo(createCountryFeature({
       NAME_EN: 'France',
       ISO_CODE: 'FR',
     }));
 
-    expect(country).toEqual({
+    expect(feature).toEqual({
       name: 'France',
       iso2: 'FR',
     });
   });
 
   it('returns a null country code when no ISO property is available', () => {
-    const country = getCountryInfo(createCountryFeature({
+    const feature = getFeatureDisplayInfo(createCountryFeature({
       NAME_IT: 'Paese senza codice',
     }));
 
-    expect(country).toEqual({
+    expect(feature).toEqual({
       name: 'Paese senza codice',
       iso2: null,
     });
   });
 
   it('ignores empty and whitespace-only string properties', () => {
-    const country = getCountryInfo(createCountryFeature({
+    const feature = getFeatureDisplayInfo(createCountryFeature({
       NAME_1: '   ',
       NAME_IT: '',
       NAME_EN: 'Italy',
@@ -56,14 +63,26 @@ describe('getCountryInfo', () => {
       GID_0: 'ITA',
     }));
 
-    expect(country).toEqual({
+    expect(feature).toEqual({
       name: 'Italy',
       iso2: 'ITA',
     });
   });
 
   it('returns null when no feature is provided', () => {
-    expect(getCountryInfo(null)).toBeNull();
+    expect(getFeatureDisplayInfo(null)).toBeNull();
+  });
+});
+
+describe('getCountryInfo', () => {
+  it('wraps feature display info for country-specific call sites', () => {
+    expect(getCountryInfo(createCountryFeature({
+      NAME_IT: 'Italia',
+      ISO_A2: 'IT',
+    }))).toEqual({
+      name: 'Italia',
+      iso2: 'IT',
+    });
   });
 });
 

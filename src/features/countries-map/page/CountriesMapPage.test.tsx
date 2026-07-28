@@ -26,7 +26,7 @@ function renderCountriesMapPage(overrides: Partial<ReturnType<typeof useCountrie
     selectCountryByCode: vi.fn(),
     selectRegionByCode: vi.fn(),
     selectSublevel2ByCode: vi.fn(),
-    selectedCountry: null,
+    selectedFeature: null,
     selectedCountryCode: '',
     selectedRegionCode: '',
     selectedSublevel2Code: '',
