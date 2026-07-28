@@ -169,19 +169,24 @@ describe('useCountriesMap', () => {
     vi.clearAllMocks();
   });
 
-  it('syncs country options and fits the initial map view on Italy', async () => {
+  it('syncs country options and selects Italy when the map first loads', async () => {
     const harness = createMapHarness();
+    const loadLevel1Data = vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] });
     vi.mocked(useLevel1DataCache).mockReturnValue({
-      loadLevel1Data: vi.fn(),
+      loadLevel1Data,
       loadLevel2Data: vi.fn(),
     });
 
     render(<HookProbe />);
 
     await waitFor(() => expect(screen.getByTestId('countries')).toHaveTextContent('CN,FR,IT'));
+    await waitFor(() => expect(screen.getByTestId('selected-code')).toHaveTextContent('IT'));
+    expect(screen.getByTestId('selected-name')).toHaveTextContent('Italia');
+    expect(screen.getByTestId('drawer-open')).toHaveTextContent('true');
+    expect(loadLevel1Data).toHaveBeenCalledWith('IT', expect.any(AbortSignal));
     expect(harness.fit).toHaveBeenCalledWith([10, 20, 30, 40], {
       duration: 850,
-      padding: [72, 72, 72, 72],
+      padding: [72, 592, 72, 72],
       maxZoom: 7,
     });
   });

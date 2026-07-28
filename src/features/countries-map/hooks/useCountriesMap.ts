@@ -432,12 +432,12 @@ export function useCountriesMap(): UseCountriesMapResult {
       countryFeaturesByCodeRef.current = featuresByCode;
       setCountries(nextCountries);
 
-      // Center on Italy once the world layer is available, without selecting it.
-      if (!didFitInitialCountryRef.current) {
+      // Select Italy once the world layer is available, unless the user already selected something.
+      if (!didFitInitialCountryRef.current && !selectedCountryCodeRef.current) {
         const initialFeature = featuresByCode.get(mapConfig.initialCountryCode);
         if (initialFeature) {
           didFitInitialCountryRef.current = true;
-          fitFeatures(initialFeature, [72, 72, 72, 72]);
+          selectCountry(initialFeature);
         }
       }
     };
