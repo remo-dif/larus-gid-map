@@ -154,7 +154,9 @@ export function useCountriesMap(): UseCountriesMapResult {
     map.getView().fit(extent, {
       duration: mapConfig.animationDuration,
       padding: viewPadding,
-      maxZoom: mapConfig.maxCountryZoom,
+      maxZoom: features.some((feature) => getSublevel2Info(feature))
+        ? mapConfig.maxSublevel2Zoom
+        : mapConfig.maxCountryZoom,
     });
   }, []);
 

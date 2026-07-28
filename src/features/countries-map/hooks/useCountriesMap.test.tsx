@@ -277,7 +277,27 @@ describe('useCountriesMap', () => {
     expect(harness.fit).toHaveBeenLastCalledWith([11.1, 21.1, 11.4, 21.4], {
       duration: 850,
       padding: [72, 592, 72, 72],
-      maxZoom: 7,
+      maxZoom: 14,
+    });
+  });
+
+  it('uses a deeper fit zoom for small sublevel 2 areas', async () => {
+    const harness = createMapHarness();
+    const loadLevel1Data = vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] });
+    const loadLevel2Data = vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] });
+    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data, loadLevel2Data });
+
+    render(<HookProbe />);
+
+    await waitFor(() => expect(screen.getByTestId('selected-code')).toHaveTextContent('IT'));
+    await userEvent.click(screen.getByRole('button', { name: 'select region' }));
+    await waitFor(() => expect(screen.getByTestId('sublevel2-items')).toHaveTextContent('ITA.1.3_1'));
+    await userEvent.click(screen.getByRole('button', { name: 'select sublevel2' }));
+
+    expect(harness.fit).toHaveBeenLastCalledWith([11.1, 21.1, 11.4, 21.4], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
+      maxZoom: 14,
     });
   });
 

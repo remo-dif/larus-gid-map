@@ -1,0 +1,4 @@
+{"type":"FeatureCollection", "features": [
+{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-5.3849,35.9115],[-5.3774,35.8836],[-5.3412,35.8746],[-5.3204,35.8862],[-5.3062,35.884],[-5.2799,35.8943],[-5.2982,35.9021],[-5.3129,35.8901],[-5.336,35.8943],[-5.3657,35.9182],[-5.3849,35.9115]]]},"properties":{"GID_0":"ESP","GID_1":"ESP.7_1","GID_2":"ESP.7.1_1","NAME_1":"CeutayMelilla","NAME_2":"Ceuta"}},
+{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-2.9517,35.2828],[-2.9318,35.2938],[-2.9462,35.3063],[-2.9626,35.3],[-2.9517,35.2828]]]},"properties":{"GID_0":"ESP","GID_1":"ESP.7_1","GID_2":"ESP.7.2_1","NAME_1":"CeutayMelilla","NAME_2":"Melilla"}}
+]}
