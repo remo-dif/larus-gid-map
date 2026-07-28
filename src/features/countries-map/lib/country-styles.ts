@@ -3,6 +3,7 @@ import { Fill, Stroke, Style } from 'ol/style';
 export type CountryStyles = {
   invisible: Style;
   region: Style;
+  sublevel2: Style;
   hover: Style;
   selected: Style;
 };
@@ -16,6 +17,10 @@ export function createCountryStyles(): CountryStyles {
     region: new Style({
       fill: new Fill({ color: 'rgba(255, 255, 255, 0.01)' }),
       stroke: new Stroke({ color: 'rgba(38, 108, 155, 0.55)', width: 1.4 }),
+    }),
+    sublevel2: new Style({
+      fill: new Fill({ color: 'rgba(255, 255, 255, 0.01)' }),
+      stroke: new Stroke({ color: 'rgba(91, 141, 54, 0.58)', width: 1.1 }),
     }),
     hover: new Style({
       fill: new Fill({ color: 'rgba(255, 152, 0, 0.06)' }),

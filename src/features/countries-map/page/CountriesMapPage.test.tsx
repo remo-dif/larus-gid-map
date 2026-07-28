@@ -19,14 +19,17 @@ function renderCountriesMapPage(overrides: Partial<ReturnType<typeof useCountrie
     loadError: null,
     mapElementRef: createRef<HTMLDivElement>(),
     regions: [],
+    sublevel2Items: [],
     selectionError: null,
     setLoadError: vi.fn(),
     setSelectionError: vi.fn(),
     selectCountryByCode: vi.fn(),
     selectRegionByCode: vi.fn(),
+    selectSublevel2ByCode: vi.fn(),
     selectedCountry: null,
     selectedCountryCode: '',
     selectedRegionCode: '',
+    selectedSublevel2Code: '',
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
   };
@@ -76,23 +79,30 @@ describe('CountriesMapPage', () => {
   it('passes countries and selection callbacks into the selector panel', async () => {
     const countries: CountryInfo[] = [{ name: 'Italia', iso2: 'IT' }];
     const regions: RegionInfo[] = [{ name: 'Abruzzo', code: 'ITA.1_1' }];
+    const sublevel2Items = [{ name: 'Pescara', code: 'ITA.1.3_1' }];
     const selectCountryByCode = vi.fn();
     const selectRegionByCode = vi.fn();
+    const selectSublevel2ByCode = vi.fn();
 
     renderCountriesMapPage({
       countries,
       regions,
+      sublevel2Items,
       selectCountryByCode,
       selectRegionByCode,
+      selectSublevel2ByCode,
     });
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Paese' }));
     await userEvent.click(screen.getByRole('option', { name: 'Italia | IT' }));
-    await userEvent.click(screen.getByRole('combobox', { name: 'Regione' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Abruzzo | ITA.1_1' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Sottolivello 1' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Abruzzo' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Sottolivello 2' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Pescara' }));
 
     expect(selectCountryByCode).toHaveBeenCalledWith('IT');
     expect(selectRegionByCode).toHaveBeenCalledWith('ITA.1_1');
+    expect(selectSublevel2ByCode).toHaveBeenCalledWith('ITA.1.3_1');
   });
 
   it('calls map zoom callbacks from the overlay controls', async () => {

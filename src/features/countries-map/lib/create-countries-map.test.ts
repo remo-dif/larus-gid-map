@@ -116,10 +116,12 @@ describe('createCountriesMap', () => {
     const hoveredFeature = new Feature({ ISO_A2: 'FR' });
     const countryFeature = new Feature({ ISO_A2: 'DE' });
     const regionFeature = new Feature({ GID_1: 'ITA.1_1' });
+    const sublevel2Feature = new Feature({ GID_2: 'ITA.1.3_1' });
     const target = document.createElement('div');
     const styles = {
       invisible: { name: 'invisible' },
       region: { name: 'region' },
+      sublevel2: { name: 'sublevel2' },
       hover: { name: 'hover' },
       selected: { name: 'selected' },
     };
@@ -149,10 +151,12 @@ describe('createCountriesMap', () => {
 
     const countryLayer = olState.layers[0];
     const regionLayer = olState.layers[1];
+    const sublevel2Layer = olState.layers[2];
     expect(countryLayer.options.style(selectedFeature)).toBe(styles.selected);
     expect(countryLayer.options.style(hoveredFeature)).toBe(styles.hover);
     expect(countryLayer.options.style(countryFeature)).toBe(styles.invisible);
     expect(regionLayer.options.style(countryFeature)).toBe(styles.region);
+    expect(sublevel2Layer.options.style(countryFeature)).toBe(styles.sublevel2);
 
     const map = olState.maps[0];
     map.featureAtPixel = countryFeature;
@@ -164,6 +168,11 @@ describe('createCountriesMap', () => {
     map.featureLayer = regionLayer;
     expect(context.findRegionAtPixel([1, 2])).toBe(regionFeature);
     expect(context.findCountryAtPixel([1, 2])).toBeNull();
+
+    map.featureAtPixel = sublevel2Feature;
+    map.featureLayer = sublevel2Layer;
+    expect(context.findSublevel2AtPixel([1, 2])).toBe(sublevel2Feature);
+    expect(context.findRegionAtPixel([1, 2])).toBeNull();
   });
 
   it('clears and mounts region features from GeoJSON data', async () => {
@@ -179,6 +188,7 @@ describe('createCountriesMap', () => {
       styles: {
         invisible: {},
         region: {},
+        sublevel2: {},
         hover: {},
         selected: {},
       } as never,
@@ -192,6 +202,33 @@ describe('createCountriesMap', () => {
     expect(mountedFeatures).toEqual([regionFeature]);
   });
 
+  it('clears and mounts sublevel 2 features from GeoJSON data', async () => {
+    const { default: Feature } = await import('ol/Feature');
+    const { createCountriesMap } = await import('./create-countries-map');
+    const sublevel2Feature = new Feature({ GID_2: 'ITA.1.3_1' });
+    olState.readFeatures.mockReturnValue([sublevel2Feature]);
+
+    const context = createCountriesMap({
+      target: document.createElement('div'),
+      hoveredFeatureRef: { current: null },
+      selectedFeaturesRef: { current: [] },
+      styles: {
+        invisible: {},
+        region: {},
+        sublevel2: {},
+        hover: {},
+        selected: {},
+      } as never,
+    });
+
+    const mountedFeatures = context.setSublevel2Features({ type: 'FeatureCollection', features: [] });
+    const sublevel2Source = olState.sources[2];
+
+    expect(sublevel2Source.clear).toHaveBeenCalled();
+    expect(sublevel2Source.addFeatures).toHaveBeenCalledWith([sublevel2Feature]);
+    expect(mountedFeatures).toEqual([sublevel2Feature]);
+  });
+
   it('reports loader failures and ignores aborted requests', async () => {
     const { createCountriesMap } = await import('./create-countries-map');
     const context = createCountriesMap({
@@ -201,6 +238,7 @@ describe('createCountriesMap', () => {
       styles: {
         invisible: {},
         region: {},
+        sublevel2: {},
         hover: {},
         selected: {},
       } as never,
@@ -230,6 +268,7 @@ describe('createCountriesMap', () => {
     const styles = {
       invisible: { name: 'invisible' },
       region: { name: 'region' },
+      sublevel2: { name: 'sublevel2' },
       hover: { name: 'hover' },
       selected: { name: 'selected' },
     };

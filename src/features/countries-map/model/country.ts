@@ -13,6 +13,11 @@ export type RegionInfo = {
   code: string;
 };
 
+export type Sublevel2Info = {
+  name: string;
+  code: string;
+};
+
 type GeoJsonPosition = number[];
 
 type GeoJsonGeometry =
@@ -48,6 +53,7 @@ export function getCountryInfo(feature: CountryFeature | null): CountryInfo | nu
 
   return {
     name:
+      getStringProperty(feature, 'NAME_2') ||
       getStringProperty(feature, 'NAME_1') ||
       getStringProperty(feature, 'NAME_IT') ||
       getStringProperty(feature, 'NAME_EN') ||
@@ -76,6 +82,26 @@ export function getRegionInfo(feature: CountryFeature | null): RegionInfo | null
       getStringProperty(feature, 'NAME_IT') ||
       getStringProperty(feature, 'NAME_EN') ||
       'Regione',
+    code,
+  };
+}
+
+export function getSublevel2Info(feature: CountryFeature | null): Sublevel2Info | null {
+  if (!feature) {
+    return null;
+  }
+
+  const code = getStringProperty(feature, 'GID_2');
+  if (!code) {
+    return null;
+  }
+
+  return {
+    name:
+      getStringProperty(feature, 'NAME_2') ||
+      getStringProperty(feature, 'NAME_IT') ||
+      getStringProperty(feature, 'NAME_EN') ||
+      'Sottolivello 2',
     code,
   };
 }

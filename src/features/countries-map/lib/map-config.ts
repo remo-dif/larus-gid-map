@@ -4,6 +4,7 @@ export const mapConfig = {
   animationDuration: 850,
   countriesGeoJsonUrl: import.meta.env.VITE_COUNTRIES_GEOJSON_URL || '/countries/world_raw.geojson',
   level1GeoJsonUrl: (countryCode: string) => `/level1/${countryCode}.geojson`,
+  level2GeoJsonUrl: (level1Code: string) => `/level2/${level1Code}.geojson`,
   initialCountryCode: 'IT',
   defaultCenter: fromLonLat([12.5, 42.5]),
   defaultZoom: 5,

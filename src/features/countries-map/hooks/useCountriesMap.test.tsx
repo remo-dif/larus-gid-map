@@ -52,15 +52,24 @@ function createMapHarness() {
     NAME_1: 'Abruzzo',
     GID_1: 'ITA.1_1',
   }, [11, 21, 12, 22]);
+  const sublevel2Feature = createMockFeature({
+    NAME_1: 'Abruzzo',
+    NAME_2: 'Pescara',
+    GID_1: 'ITA.1_1',
+    GID_2: 'ITA.1.3_1',
+  }, [11.1, 21.1, 11.4, 21.4]);
   const animate = vi.fn();
   const fit = vi.fn();
   const getZoom = vi.fn(() => 5);
   const clearRegionSource = vi.fn();
+  const clearSublevel2Source = vi.fn();
   const setRegionFeatures = vi.fn(() => [regionFeature as never]);
+  const setSublevel2Features = vi.fn(() => [sublevel2Feature as never]);
   const abortCountryLoad = vi.fn();
   const setTarget = vi.fn();
   const findCountryAtPixel = vi.fn();
   const findRegionAtPixel = vi.fn();
+  const findSublevel2AtPixel = vi.fn();
 
   const countrySource = {
     getFeatures: vi.fn(() => [franceFeature, chinaMainFeature, chinaFragmentFeature, italyFeature]),
@@ -71,6 +80,9 @@ function createMapHarness() {
   };
   const regionSource = {
     clear: clearRegionSource,
+  };
+  const sublevel2Source = {
+    clear: clearSublevel2Source,
   };
   const map = {
     getSize: vi.fn(() => [1200, 800]),
@@ -88,18 +100,23 @@ function createMapHarness() {
     map: map as never,
     countrySource: countrySource as never,
     regionSource: regionSource as never,
+    sublevel2Source: sublevel2Source as never,
     findCountryAtPixel,
     findRegionAtPixel,
+    findSublevel2AtPixel,
     setRegionFeatures,
+    setSublevel2Features,
   });
 
   return {
     abortCountryLoad,
     clearRegionSource,
+    clearSublevel2Source,
     countrySource,
     eventHandlers,
     findCountryAtPixel,
     findRegionAtPixel,
+    findSublevel2AtPixel,
     animate,
     fit,
     getZoom,
@@ -108,7 +125,9 @@ function createMapHarness() {
     franceFeature,
     italyFeature,
     regionFeature,
+    sublevel2Feature,
     setRegionFeatures,
+    setSublevel2Features,
     setTarget,
     sourceHandlers,
     targetElement,
@@ -123,8 +142,10 @@ function HookProbe() {
       <div ref={countriesMap.mapElementRef} data-testid="map" />
       <div data-testid="countries">{countriesMap.countries.map((country) => country.iso2).join(',')}</div>
       <div data-testid="regions">{countriesMap.regions.map((region) => region.code).join(',')}</div>
+      <div data-testid="sublevel2-items">{countriesMap.sublevel2Items.map((item) => item.code).join(',')}</div>
       <div data-testid="selected-code">{countriesMap.selectedCountryCode}</div>
       <div data-testid="selected-region-code">{countriesMap.selectedRegionCode}</div>
+      <div data-testid="selected-sublevel2-code">{countriesMap.selectedSublevel2Code}</div>
       <div data-testid="selected-name">{countriesMap.selectedCountry?.name || ''}</div>
       <div data-testid="drawer-open">{String(countriesMap.drawerOpen)}</div>
       <div data-testid="selection-error">{countriesMap.selectionError || ''}</div>
@@ -135,6 +156,7 @@ function HookProbe() {
       <button type="button" onClick={() => countriesMap.selectCountryByCode('')}>clear</button>
       <button type="button" onClick={() => countriesMap.selectCountryByCode('XX')}>select missing</button>
       <button type="button" onClick={() => countriesMap.selectRegionByCode('ITA.1_1')}>select region</button>
+      <button type="button" onClick={() => countriesMap.selectSublevel2ByCode('ITA.1.3_1')}>select sublevel2</button>
       <button type="button" onClick={countriesMap.clearSelection}>close</button>
       <button type="button" onClick={countriesMap.zoomIn}>zoom in</button>
       <button type="button" onClick={countriesMap.zoomOut}>zoom out</button>
@@ -151,6 +173,7 @@ describe('useCountriesMap', () => {
     const harness = createMapHarness();
     vi.mocked(useLevel1DataCache).mockReturnValue({
       loadLevel1Data: vi.fn(),
+      loadLevel2Data: vi.fn(),
     });
 
     render(<HookProbe />);
@@ -167,6 +190,7 @@ describe('useCountriesMap', () => {
     const harness = createMapHarness();
     vi.mocked(useLevel1DataCache).mockReturnValue({
       loadLevel1Data: vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] }),
+      loadLevel2Data: vi.fn(),
     });
 
     render(<HookProbe />);
@@ -188,6 +212,7 @@ describe('useCountriesMap', () => {
     const harness = createMapHarness();
     vi.mocked(useLevel1DataCache).mockReturnValue({
       loadLevel1Data: vi.fn(),
+      loadLevel2Data: vi.fn(),
     });
 
     render(<HookProbe />);
@@ -209,7 +234,9 @@ describe('useCountriesMap', () => {
     const harness = createMapHarness();
     const level1Data = { type: 'FeatureCollection', features: [] };
     const loadLevel1Data = vi.fn().mockResolvedValue(level1Data);
-    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data });
+    const level2Data = { type: 'FeatureCollection', features: [] };
+    const loadLevel2Data = vi.fn().mockResolvedValue(level2Data);
+    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data, loadLevel2Data });
 
     render(<HookProbe />);
 
@@ -225,9 +252,24 @@ describe('useCountriesMap', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'select region' }));
 
+    await waitFor(() => expect(loadLevel2Data).toHaveBeenCalledWith('ITA.1_1', expect.any(AbortSignal)));
+    expect(harness.clearSublevel2Source).toHaveBeenCalled();
+    expect(harness.setSublevel2Features).toHaveBeenCalledWith(level2Data);
+    await waitFor(() => expect(screen.getByTestId('sublevel2-items')).toHaveTextContent('ITA.1.3_1'));
     expect(screen.getByTestId('selected-region-code')).toHaveTextContent('ITA.1_1');
     expect(screen.getByTestId('selected-name')).toHaveTextContent('Abruzzo');
     expect(harness.fit).toHaveBeenLastCalledWith([11, 21, 12, 22], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
+      maxZoom: 7,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'select sublevel2' }));
+
+    expect(screen.getByTestId('selected-region-code')).toHaveTextContent('ITA.1_1');
+    expect(screen.getByTestId('selected-sublevel2-code')).toHaveTextContent('ITA.1.3_1');
+    expect(screen.getByTestId('selected-name')).toHaveTextContent('Pescara');
+    expect(harness.fit).toHaveBeenLastCalledWith([11.1, 21.1, 11.4, 21.4], {
       duration: 850,
       padding: [72, 592, 72, 72],
       maxZoom: 7,
@@ -238,6 +280,7 @@ describe('useCountriesMap', () => {
     createMapHarness();
     vi.mocked(useLevel1DataCache).mockReturnValue({
       loadLevel1Data: vi.fn(),
+      loadLevel2Data: vi.fn(),
     });
 
     render(<HookProbe />);
@@ -251,6 +294,7 @@ describe('useCountriesMap', () => {
     const harness = createMapHarness();
     vi.mocked(useLevel1DataCache).mockReturnValue({
       loadLevel1Data: vi.fn(),
+      loadLevel2Data: vi.fn(),
     });
     const { unmount } = render(<HookProbe />);
 
@@ -300,7 +344,7 @@ describe('useCountriesMap', () => {
   it('shows load and region errors from map source and level1 failures', async () => {
     const harness = createMapHarness();
     const loadLevel1Data = vi.fn().mockRejectedValue(new Error('no regions'));
-    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data });
+    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data, loadLevel2Data: vi.fn() });
 
     render(<HookProbe />);
 
@@ -322,7 +366,7 @@ describe('useCountriesMap', () => {
   it('silently clears regions when level1 data is missing with 404', async () => {
     const harness = createMapHarness();
     const loadLevel1Data = vi.fn().mockRejectedValue(new Level1DataFetchError('IT', 404));
-    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data });
+    vi.mocked(useLevel1DataCache).mockReturnValue({ loadLevel1Data, loadLevel2Data: vi.fn() });
 
     render(<HookProbe />);
 

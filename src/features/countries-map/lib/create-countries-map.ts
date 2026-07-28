@@ -24,9 +24,12 @@ type CountriesMapContext = {
   map: OlMap;
   countrySource: VectorSource<CountryFeature>;
   regionSource: VectorSource<CountryFeature>;
+  sublevel2Source: VectorSource<CountryFeature>;
   findCountryAtPixel: (pixel: Pixel) => CountryFeature | null;
   findRegionAtPixel: (pixel: Pixel) => CountryFeature | null;
+  findSublevel2AtPixel: (pixel: Pixel) => CountryFeature | null;
   setRegionFeatures: (geoJson: Level1Data) => CountryFeature[];
+  setSublevel2Features: (geoJson: Level1Data) => CountryFeature[];
 };
 
 function isCountryFeature(feature: FeatureLike): feature is CountryFeature {
@@ -126,6 +129,27 @@ export function createCountriesMap({
     },
   });
 
+  const sublevel2Source = new VectorSource<CountryFeature>();
+  const sublevel2Layer = new VectorLayer({
+    source: sublevel2Source,
+    declutter: false,
+    style: (feature: FeatureLike) => {
+      if (!isCountryFeature(feature)) {
+        return styles.invisible;
+      }
+
+      if (selectedFeaturesRef.current.includes(feature)) {
+        return styles.selected;
+      }
+
+      if (feature === hoveredFeatureRef.current) {
+        return styles.hover;
+      }
+
+      return styles.sublevel2;
+    },
+  });
+
   const map = new OlMap({
     target,
     layers: [
@@ -138,6 +162,7 @@ export function createCountriesMap({
       }),
       countryLayer,
       regionLayer,
+      sublevel2Layer,
     ],
     view: new View({
       center: mapConfig.defaultCenter,
@@ -154,6 +179,7 @@ export function createCountriesMap({
     map,
     countrySource,
     regionSource,
+    sublevel2Source,
     findCountryAtPixel: (pixel: Pixel) =>
       map.forEachFeatureAtPixel(pixel, (feature) => (isCountryFeature(feature) ? feature : null), {
         layerFilter: (layer) => layer === countryLayer,
@@ -164,11 +190,22 @@ export function createCountriesMap({
         layerFilter: (layer) => layer === regionLayer,
         hitTolerance: 2,
       }) || null,
+    findSublevel2AtPixel: (pixel: Pixel) =>
+      map.forEachFeatureAtPixel(pixel, (feature) => (isCountryFeature(feature) ? feature : null), {
+        layerFilter: (layer) => layer === sublevel2Layer,
+        hitTolerance: 2,
+      }) || null,
     setRegionFeatures: (geoJson: Level1Data) => {
       // Replacing the source clears the previous country's regions before mounting the new ones.
       regionSource.clear();
       const features = countryFormat.readFeatures(geoJson);
       regionSource.addFeatures(features);
+      return features;
+    },
+    setSublevel2Features: (geoJson: Level1Data) => {
+      sublevel2Source.clear();
+      const features = countryFormat.readFeatures(geoJson);
+      sublevel2Source.addFeatures(features);
       return features;
     },
   };

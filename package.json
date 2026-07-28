@@ -9,6 +9,8 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "fetch:gid2": "node fetchGid2.js",
+    "fetch:gid2:it": "node fetchGid2.js --country IT",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -29,6 +31,7 @@
     "@vitejs/plugin-react": "^4.6.0",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^29.1.1",
+    "mapshaper": "^0.7.49",
     "typescript": "^5.8.3",
     "vite": "^7.0.0",
     "vitest": "^4.1.10"

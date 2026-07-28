@@ -15,16 +15,24 @@ const regions: RegionInfo[] = [
   { name: 'Lazio', code: 'ITA.7_1' },
 ];
 
+const sublevel2Items = [
+  { name: 'Chieti', code: 'ITA.1.1_1' },
+  { name: 'Pescara', code: 'ITA.1.3_1' },
+];
+
 describe('CountrySelectorPanel', () => {
   it('renders only countries with a selectable ISO code', async () => {
     render(
       <CountrySelectorPanel
         countries={countries}
         regions={[]}
+        sublevel2Items={[]}
         selectedCountryCode=""
         selectedRegionCode=""
+        selectedSublevel2Code=""
         onCountryChange={vi.fn()}
         onRegionChange={vi.fn()}
+        onSublevel2Change={vi.fn()}
       />,
     );
 
@@ -43,10 +51,13 @@ describe('CountrySelectorPanel', () => {
       <CountrySelectorPanel
         countries={countries}
         regions={[]}
+        sublevel2Items={[]}
         selectedCountryCode=""
         selectedRegionCode=""
+        selectedSublevel2Code=""
         onCountryChange={onCountryChange}
         onRegionChange={vi.fn()}
+        onSublevel2Change={vi.fn()}
       />,
     );
 
@@ -63,16 +74,42 @@ describe('CountrySelectorPanel', () => {
       <CountrySelectorPanel
         countries={countries}
         regions={regions}
+        sublevel2Items={[]}
         selectedCountryCode="IT"
         selectedRegionCode=""
+        selectedSublevel2Code=""
         onCountryChange={vi.fn()}
         onRegionChange={onRegionChange}
+        onSublevel2Change={vi.fn()}
       />,
     );
 
-    await userEvent.click(screen.getByRole('combobox', { name: 'Regione' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Lazio | ITA.7_1' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Sottolivello 1' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Lazio' }));
 
     expect(onRegionChange).toHaveBeenCalledWith('ITA.7_1');
+  });
+
+  it('calls onSublevel2Change with the selected sublevel 2 code', async () => {
+    const onSublevel2Change = vi.fn();
+
+    render(
+      <CountrySelectorPanel
+        countries={countries}
+        regions={regions}
+        sublevel2Items={sublevel2Items}
+        selectedCountryCode="IT"
+        selectedRegionCode="ITA.1_1"
+        selectedSublevel2Code=""
+        onCountryChange={vi.fn()}
+        onRegionChange={vi.fn()}
+        onSublevel2Change={onSublevel2Change}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Sottolivello 2' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Pescara' }));
+
+    expect(onSublevel2Change).toHaveBeenCalledWith('ITA.1.3_1');
   });
 });

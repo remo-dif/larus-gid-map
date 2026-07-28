@@ -18,14 +18,17 @@ export function CountriesMapPage() {
     loadError,
     mapElementRef,
     regions,
+    sublevel2Items,
     selectionError,
     setLoadError,
     setSelectionError,
     selectCountryByCode,
     selectRegionByCode,
+    selectSublevel2ByCode,
     selectedCountry,
     selectedCountryCode,
     selectedRegionCode,
+    selectedSublevel2Code,
     zoomIn,
     zoomOut,
   } = useCountriesMap();
@@ -67,10 +70,13 @@ export function CountriesMapPage() {
       <CountrySelectorPanel
         countries={countries}
         regions={regions}
+        sublevel2Items={sublevel2Items}
         selectedCountryCode={selectedCountryCode}
         selectedRegionCode={selectedRegionCode}
+        selectedSublevel2Code={selectedSublevel2Code}
         onCountryChange={selectCountryByCode}
         onRegionChange={selectRegionByCode}
+        onSublevel2Change={selectSublevel2ByCode}
       />
       <Box className="map-zoom-controls" aria-label="Controlli zoom">
         <IconButton aria-label="Aumenta zoom" onClick={zoomIn} size="small">
