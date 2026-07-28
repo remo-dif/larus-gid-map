@@ -266,7 +266,7 @@ describe('useCountriesMap', () => {
     expect(harness.fit).toHaveBeenLastCalledWith([11, 21, 12, 22], {
       duration: 850,
       padding: [72, 592, 72, 72],
-      maxZoom: 7,
+      maxZoom: 11,
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'select sublevel2' }));
@@ -298,6 +298,26 @@ describe('useCountriesMap', () => {
       duration: 850,
       padding: [72, 592, 72, 72],
       maxZoom: 14,
+    });
+  });
+
+  it('uses a deeper fit zoom for sublevel 1 areas than for countries', async () => {
+    const harness = createMapHarness();
+    const loadLevel1Data = vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] });
+    vi.mocked(useLevel1DataCache).mockReturnValue({
+      loadLevel1Data,
+      loadLevel2Data: vi.fn().mockResolvedValue({ type: 'FeatureCollection', features: [] }),
+    });
+
+    render(<HookProbe />);
+
+    await waitFor(() => expect(screen.getByTestId('regions')).toHaveTextContent('ITA.1_1'));
+    await userEvent.click(screen.getByRole('button', { name: 'select region' }));
+
+    expect(harness.fit).toHaveBeenLastCalledWith([11, 21, 12, 22], {
+      duration: 850,
+      padding: [72, 592, 72, 72],
+      maxZoom: 11,
     });
   });
 

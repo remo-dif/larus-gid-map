@@ -11,6 +11,7 @@ export const mapConfig = {
   minZoom: 2,
   drawerWidth: 520,
   maxCountryZoom: 7,
+  maxSublevel1Zoom: 11,
   maxSublevel2Zoom: 14,
   maxZoom: 18,
   osmTileUrl: import.meta.env.VITE_OSM_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
