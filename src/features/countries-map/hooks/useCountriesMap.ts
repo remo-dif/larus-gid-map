@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import OlMap from 'ol/Map';
 import { unByKey } from 'ol/Observable';
 import { createEmpty, extend } from 'ol/extent';
@@ -49,6 +49,71 @@ type UseCountriesMapResult = {
 
 type ViewPadding = [number, number, number, number];
 
+type SelectionState = {
+  drawerOpen: boolean;
+  selectedCountryCode: string;
+  selectedFeature: FeatureDisplayInfo | null;
+  selectedRegionCode: string;
+  selectedSublevel2Code: string;
+};
+
+type SelectionAction =
+  | { type: 'clear' }
+  | { type: 'clear-region' }
+  | { type: 'prepare-region'; regionCode: string }
+  | { type: 'select-country'; countryCode: string }
+  | { type: 'select-features'; feature: FeatureDisplayInfo | null; regionCode: string; sublevel2Code: string }
+  | { type: 'set-sublevel2-code'; sublevel2Code: string };
+
+const initialSelectionState: SelectionState = {
+  drawerOpen: false,
+  selectedCountryCode: '',
+  selectedFeature: null,
+  selectedRegionCode: '',
+  selectedSublevel2Code: '',
+};
+
+function selectionReducer(state: SelectionState, action: SelectionAction): SelectionState {
+  switch (action.type) {
+    case 'clear':
+      return initialSelectionState;
+    case 'clear-region':
+      return {
+        ...state,
+        selectedRegionCode: '',
+        selectedSublevel2Code: '',
+      };
+    case 'prepare-region':
+      return {
+        ...state,
+        selectedRegionCode: action.regionCode,
+        selectedSublevel2Code: '',
+      };
+    case 'select-country':
+      return {
+        ...state,
+        selectedCountryCode: action.countryCode,
+        selectedRegionCode: '',
+        selectedSublevel2Code: '',
+      };
+    case 'select-features':
+      return {
+        ...state,
+        drawerOpen: true,
+        selectedFeature: action.feature,
+        selectedRegionCode: action.regionCode,
+        selectedSublevel2Code: action.sublevel2Code,
+      };
+    case 'set-sublevel2-code':
+      return {
+        ...state,
+        selectedSublevel2Code: action.sublevel2Code,
+      };
+    default:
+      return state;
+  }
+}
+
 function refreshFeature(feature: CountryFeature | null) {
   if (feature) {
     feature.changed();
@@ -86,11 +151,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const [selectedFeature, setSelectedFeature] = useState<FeatureDisplayInfo | null>(null);
-  const [selectedCountryCode, setSelectedCountryCode] = useState('');
-  const [selectedRegionCode, setSelectedRegionCode] = useState('');
-  const [selectedSublevel2Code, setSelectedSublevel2Code] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectionState, dispatchSelection] = useReducer(selectionReducer, initialSelectionState);
   const { loadLevel1Data, loadLevel2Data } = useLevel1DataCache();
   const styles = useMemo(() => createCountryStyles(), []);
 
@@ -122,13 +183,9 @@ export function useCountriesMap(): UseCountriesMapResult {
     sublevel2FeaturesByCodeRef.current = new Map();
     setRegions([]);
     setSublevel2Items([]);
-    setSelectedFeature(null);
-    setSelectedCountryCode('');
-    setSelectedRegionCode('');
-    setSelectedSublevel2Code('');
     selectedCountryCodeRef.current = '';
     selectedRegionCodeRef.current = '';
-    setDrawerOpen(false);
+    dispatchSelection({ type: 'clear' });
     refreshFeatures(currentSelected);
     refreshFeature(currentHovered);
     mapRef.current?.getTargetElement().style.removeProperty('cursor');
@@ -277,11 +334,14 @@ export function useCountriesMap(): UseCountriesMapResult {
 
   const selectFeatures = useCallback((features: CountryFeature[]) => {
     const previousSelected = selectedFeaturesRef.current;
+    const feature = features[0] || null;
     selectedFeaturesRef.current = features;
-    setSelectedFeature(getFeatureDisplayInfo(features[0] || null));
-    setSelectedRegionCode(getRegionInfo(features[0] || null)?.code || '');
-    setSelectedSublevel2Code(getSublevel2Info(features[0] || null)?.code || '');
-    setDrawerOpen(true);
+    dispatchSelection({
+      type: 'select-features',
+      feature: getFeatureDisplayInfo(feature),
+      regionCode: getRegionInfo(feature)?.code || '',
+      sublevel2Code: getSublevel2Info(feature)?.code || '',
+    });
     refreshFeatures(previousSelected);
     refreshFeatures(features);
     fitFeatures(features);
@@ -300,9 +360,7 @@ export function useCountriesMap(): UseCountriesMapResult {
     sublevel2FeaturesByCodeRef.current = new Map();
     setRegions([]);
     setSublevel2Items([]);
-    setSelectedRegionCode('');
-    setSelectedSublevel2Code('');
-    setSelectedCountryCode(country.iso2);
+    dispatchSelection({ type: 'select-country', countryCode: country.iso2 });
     selectedCountryCodeRef.current = country.iso2;
     selectedRegionCodeRef.current = '';
     selectFeatures(features);
@@ -329,8 +387,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const selectRegionByCode = useCallback(
     (regionCode: string) => {
       if (!regionCode) {
-        setSelectedRegionCode('');
-        setSelectedSublevel2Code('');
+        dispatchSelection({ type: 'clear-region' });
         selectedRegionCodeRef.current = '';
         sublevel2LoadControllerRef.current?.abort();
         clearSublevel2FeaturesRef.current?.();
@@ -351,7 +408,7 @@ export function useCountriesMap(): UseCountriesMapResult {
         sublevel2FeaturesByCodeRef.current = new Map();
         setSublevel2Items([]);
         selectedRegionCodeRef.current = regionCode;
-        setSelectedSublevel2Code('');
+        dispatchSelection({ type: 'prepare-region', regionCode });
         selectFeatures([feature]);
         void mountLevel2Layer(regionCode);
       } else {
@@ -364,7 +421,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   const selectSublevel2ByCode = useCallback(
     (sublevel2Code: string) => {
       if (!sublevel2Code) {
-        setSelectedSublevel2Code('');
+        dispatchSelection({ type: 'set-sublevel2-code', sublevel2Code: '' });
         const selectedRegionFeature = selectedRegionCodeRef.current
           ? regionFeaturesByCodeRef.current.get(selectedRegionCodeRef.current)
           : null;
@@ -482,7 +539,7 @@ export function useCountriesMap(): UseCountriesMapResult {
       } else if (regionFeature) {
         const regionCode = getRegionInfo(regionFeature)?.code || '';
         selectedRegionCodeRef.current = regionCode;
-        setSelectedSublevel2Code('');
+        dispatchSelection({ type: 'set-sublevel2-code', sublevel2Code: '' });
         clearSublevel2FeaturesRef.current?.();
         sublevel2FeaturesByCodeRef.current = new Map();
         setSublevel2Items([]);
@@ -536,7 +593,7 @@ export function useCountriesMap(): UseCountriesMapResult {
   return {
     clearSelection,
     countries,
-    drawerOpen,
+    drawerOpen: selectionState.drawerOpen,
     isLoadingCountries,
     loadError,
     mapElementRef,
@@ -548,10 +605,10 @@ export function useCountriesMap(): UseCountriesMapResult {
     selectCountryByCode,
     selectRegionByCode,
     selectSublevel2ByCode,
-    selectedFeature,
-    selectedCountryCode,
-    selectedRegionCode,
-    selectedSublevel2Code,
+    selectedFeature: selectionState.selectedFeature,
+    selectedCountryCode: selectionState.selectedCountryCode,
+    selectedRegionCode: selectionState.selectedRegionCode,
+    selectedSublevel2Code: selectionState.selectedSublevel2Code,
     zoomIn,
     zoomOut,
   };
